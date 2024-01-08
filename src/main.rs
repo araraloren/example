@@ -51,6 +51,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .repeat_one()
         .then(ident)
         .pat();
+    // compile about 25s+
     let layer1 = ty
         .then(ty.quote("<", ">"))
         .map(|(w, ty)| Ok(Ty::Layer1(w, ty)));
@@ -59,12 +60,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|(w1, (w2, ty))| Ok(Ty::Layer2(w1, w2, ty)));
     let layer0 = ty.map(|ty| Ok(Ty::Layer0(ty)));
     let field = ident.sep_once(":", layer2.or(layer1.or(layer0)));
+    // let layer1 = ty
+    //     .then(ty.quote("<", ">"))
+    //     .map(|(w, ty)| Ok(Ty::Layer1(w, ty)));
+    // let layer0 = ty.map(|ty| Ok(Ty::Layer0(ty)));
+    // let field = ident.sep_once(":", layer1.or(layer0));
+    // comment 55 ~ 62 and uncomment current block, compile about 2s+
     let public = field
         .padded("pub")
         .map(|(name, ty_name)| Ok(Field::public(name, ty_name)));
     let private = field.map(|(name, ty_name)| Ok(Field::private(name, ty_name)));
     let parser = public.or(private).sep(",");
-    
+
     let data = "abc: Option<i32>";
     let b_policy = re_policy(neu::whitespace().repeat_full());
 
