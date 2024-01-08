@@ -1,51 +1,74 @@
-#![allow(internal_features)]
-#![no_std]
-#![no_main]
-#![feature(lang_items)]
+use neure::{
+    ctx::{re_policy, PolicyCtx},
+    prelude::*,
+};
 
-extern crate alloc;
+#[derive(Debug, Clone)]
+pub enum Ty<'a> {
+    Layer0(&'a str),
 
-#[link(name = "vcruntime")]
-extern { }
+    Layer1(&'a str, &'a str),
 
-#[link(name = "ucrt")]
-extern { }
-
-use alloc::{boxed::Box, ffi::CString};
-
-#[no_mangle]
-static _fltused: i32 = 0;
-
-#[panic_handler]
-pub fn panic_handler(_: &core::panic::PanicInfo<'_>) -> ! {
-    loop { }
+    Layer2(&'a str, &'a str, &'a str),
 }
 
-#[lang = "eh_personality"]
-pub fn personality() { }
+#[derive(Debug, Clone)]
+pub struct Field<'a> {
+    #[allow(unused)]
+    ident: &'a str,
 
-#[global_allocator]
-static GLOBAL_ALLOCATOR: Allocator = Allocator;
+    #[allow(unused)]
+    ty_name: Ty<'a>,
 
-#[no_mangle]
-#[allow(non_snake_case)]
-pub fn mainCRTStartup () -> isize {
-    let _: Box<u8> = Box::new(0u8);
-    let msg = CString::new("Hello from mainCRTStartup").unwrap();
-    unsafe {
-        libc::printf(msg.as_c_str().as_ptr());
-    }
-    0
+    public: bool,
 }
 
-pub struct Allocator;
-
-unsafe impl alloc::alloc::GlobalAlloc for Allocator {
-    unsafe fn alloc(&self, layout: core::alloc::Layout) -> *mut u8 {
-        libc::malloc(layout.size()) as *mut u8
+impl<'a> Field<'a> {
+    pub fn private(ident: &'a str, ty_name: Ty<'a>) -> Self {
+        Self {
+            ident,
+            ty_name,
+            public: false,
+        }
     }
 
-    unsafe fn dealloc(&self, ptr: *mut u8, _layout: core::alloc::Layout) {
-        libc::free(ptr.cast())
+    pub fn public(name: &'a str, ty_name: Ty<'a>) -> Self {
+        Self {
+            ident: name,
+            ty_name,
+            public: true,
+        }
     }
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let unit = neu::ascii_alphabetic()
+        .or(neu::ascii_alphanumeric())
+        .or('_');
+    let ident = unit.repeat_one_more();
+    let ty = neu::ascii_alphabetic()
+        .or('_')
+        .repeat_one()
+        .then(ident)
+        .pat();
+    let layer1 = ty
+        .then(ty.quote("<", ">"))
+        .map(|(w, ty)| Ok(Ty::Layer1(w, ty)));
+    let layer2 = ty
+        .then(ty.then(ty.quote("<", ">")).quote("<", ">"))
+        .map(|(w1, (w2, ty))| Ok(Ty::Layer2(w1, w2, ty)));
+    let layer0 = ty.map(|ty| Ok(Ty::Layer0(ty)));
+    let field = ident.sep_once(":", layer2.or(layer1.or(layer0)));
+    let public = field
+        .padded("pub")
+        .map(|(name, ty_name)| Ok(Field::public(name, ty_name)));
+    let private = field.map(|(name, ty_name)| Ok(Field::private(name, ty_name)));
+    let parser = public.or(private).sep(",");
+    
+    let data = "abc: Option<i32>";
+    let b_policy = re_policy(neu::whitespace().repeat_full());
+
+    dbg!(PolicyCtx::new(CharsCtx::new(data), b_policy).ctor(&parser)?);
+
+    Ok(())
 }
