@@ -6,16 +6,13 @@ mod sqlite3 {
     include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 }
 
-use std::{
-    ffi::{CStr, CString},
-    ptr::null_mut,
-};
+use std::{ffi::CStr, ptr::null_mut};
 
 use crate::sqlite3::sqlite3_errmsg;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut db = null_mut();
-    let name = CString::new("test.db")?;
+    let name: &CStr = c"test.db";
     let rc = unsafe { sqlite3::sqlite3_open(name.as_ptr(), &mut db as *mut _) };
 
     if rc as u32 != sqlite3::SQLITE_OK {
