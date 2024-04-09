@@ -15,10 +15,6 @@ ApplicationWindow {
         id: fileServer
         filesModel: FileListModel { 
             id: fileListModel
-            onDataChanged: {
-                console.log("1234");
-                console.log(fileListModel);
-            }
         }
     }
 
@@ -43,6 +39,7 @@ ApplicationWindow {
             Layout.verticalStretchFactor: 1
             TextField {
                 id: location
+                color: "red"
                 anchors.fill: parent
                 onPressed: {
                     folderDialog.open()
@@ -56,7 +53,7 @@ ApplicationWindow {
             Layout.verticalStretchFactor: 10
             ListView {
                 id: listView
-                model: fileServer.filesModel
+                model: fileListModel
                 spacing: 5
                 anchors.fill: parent
                 delegate: ItemDelegate  {
@@ -68,10 +65,10 @@ ApplicationWindow {
                         color: "lightgrey"
                         Button {
                             // horizontalAlignment: Qt.AlignHCenter
-                            text: "test test"
+                            text: model.path
                             anchors.fill: parent
                             onClicked: {
-                                console.log("123")
+                                console.log(text)
                             }
                         }
                     }    

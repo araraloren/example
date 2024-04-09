@@ -123,9 +123,7 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_override]
         fn data(self: &FileListModel, index: &QModelIndex, role: i32) -> QVariant;
-    }
 
-    unsafe extern "RustQt" {
         /// Return the role names for the QAbstractListModel
         #[qinvokable]
         #[cxx_override]
@@ -139,7 +137,7 @@ pub mod qobject {
 
     unsafe extern "RustQt" {
         #[qinvokable]
-        fn refresh_whole_model(self: Pin<&mut FileListModel>);
+        fn reset_files(self: Pin<&mut FileListModel>, files: QList_QString);
     }
 }
 
@@ -153,7 +151,6 @@ use cxx_qt_lib::QModelIndex;
 use cxx_qt_lib::QString;
 use cxx_qt_lib::QUrl;
 use cxx_qt_lib::QVariant;
-use cxx_qt_lib::QVector;
 use std::path::Path;
 
 use self::qobject::FileListModel;
@@ -210,11 +207,9 @@ impl qobject::FileServer {
             .for_each(|v| files.append(v.clone()));
         unsafe {
             if let Some(inner) = self.as_mut().files_model().as_mut() {
-                let mut pinned = Pin::new_unchecked(inner);
+                let pinned = Pin::new_unchecked(inner);
 
-                println!("changed to {:?}", files.len());
-                pinned.as_mut().set_files(files);
-                pinned.as_mut().refresh_whole_model();
+                pinned.reset_files(files);
             }
         }
     }
@@ -242,12 +237,7 @@ impl qobject::FileListModel {
 
         QVariant::default()
     }
-}
-// ANCHOR_END: book_inherit_data
 
-// ANCHOR_END: book_inherit_can_fetch_more
-
-impl qobject::FileListModel {
     /// Return the role names for the QAbstractListModel
     pub fn role_names(&self) -> QHash<QHashPair_i32_QByteArray> {
         let mut roles = QHash::<QHashPair_i32_QByteArray>::default();
@@ -263,14 +253,11 @@ impl qobject::FileListModel {
 }
 
 impl qobject::FileListModel {
-    pub fn refresh_whole_model(self: Pin<&mut Self>) {
+    pub fn reset_files(mut self: Pin<&mut Self>, files: QList<QString>) {
         unsafe {
-            let left = self.index(0, 0, &QModelIndex::default());
-            let right = self.index(self.files.len() as i32, 0, &QModelIndex::default());
-            let roles = QVector::<i32>::default();
-
-            println!("changed called: {}", self.files.len());
-            self.data_changed(&left, &right, &roles);
+            self.as_mut().begin_reset_model();
+            self.as_mut().set_files(files);
+            self.as_mut().end_reset_model();
         }
     }
 }
