@@ -1,32 +1,53 @@
-#[allow(non_upper_case_globals)]
-#[allow(non_camel_case_types)]
-#[allow(non_snake_case)]
-#[allow(unused)]
-mod sqlite3 {
-    include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+#![allow(non_snake_case)]
+
+use dioxus::prelude::*;
+use log::LevelFilter;
+
+#[derive(Clone, Routable, Debug, PartialEq)]
+enum Route {
+    #[route("/")]
+    Home {},
+    #[route("/blog/:id")]
+    Blog { id: i32 },
 }
 
-use std::{ffi::CStr, ptr::null_mut};
+fn main() {
+    // Init debug
+    dioxus_logger::init(LevelFilter::Info).expect("failed to init logger");
+    console_error_panic_hook::set_once();
 
-use crate::sqlite3::sqlite3_errmsg;
+    launch(App);
+}
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut db = null_mut();
-    let name: &CStr = c"test.db";
-    let rc = unsafe { sqlite3::sqlite3_open(name.as_ptr(), &mut db as *mut _) };
-
-    if rc as u32 != sqlite3::SQLITE_OK {
-        let msg = unsafe { sqlite3_errmsg(db) };
-        panic!("Can not open database: {:?}", unsafe {
-            &CStr::from_ptr(msg)
-        });
-    } else {
-        println!("Open database successfully");
+fn App() -> Element {
+    rsx! {
+        Router::<Route> {}
     }
+}
 
-    unsafe {
-        dbg!(sqlite3::sqlite3_close(db));
+#[component]
+fn Blog(id: i32) -> Element {
+    rsx! {
+        Link { to: Route::Home {}, "Go to counter" }
+        "Blog post {id}"
     }
+}
 
-    Ok(())
+#[component]
+fn Home() -> Element {
+    let mut count = use_signal(|| 0);
+
+    rsx! {
+        Link {
+            to: Route::Blog {
+                id: count()
+            },
+            "Go to blog"
+        }
+        div {
+            h1 { "High-Five counter: {count}" }
+            button { onclick: move |_| count += 1, "Up high!" }
+            button { onclick: move |_| count -= 1, "Down low!" }
+        }
+    }
 }
