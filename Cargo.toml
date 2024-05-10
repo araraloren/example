@@ -1,12 +1,9 @@
 [package]
-name = "cxx-qt-example"
+name = "overlapped"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-cxx = "1.0.118"
-cxx-qt = "0.6.0"
-cxx-qt-lib = "0.6.0"
-
-[build-dependencies]
-cxx-qt-build = { version = "0.6.0", features = ["link_qt_object_files"] }
+encoding_rs = "0.8.34"
+local-encoding = "0.2.0"
+windows = { version = "0.56.0", features = ["Win32_Security", "Win32_System_IO", "Win32_System_Threading", "Win32_Storage_FileSystem"] }
