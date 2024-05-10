@@ -4,6 +4,7 @@ use ffmpeg::format::{input, Pixel};
 use ffmpeg::media::Type;
 use ffmpeg::software::scaling::{context::Context, flag::Flags};
 use ffmpeg::util::frame::video::Video;
+use ffmpeg::Rational;
 use std::env;
 use std::fs::File;
 use std::io::prelude::*;
@@ -20,6 +21,17 @@ fn main() -> Result<(), ffmpeg::Error> {
 
         let context_decoder = ffmpeg::codec::context::Context::from_parameters(input.parameters())?;
         let mut decoder = context_decoder.decoder().video()?;
+        let codec = ffmpeg::codec::encoder::find(ffmpeg::codec::Id::PNG).unwrap();
+        let context_decoder = ffmpeg::codec::context::Context::new_with_codec(codec);
+        let mut encoder = context_decoder.encoder().video()?;
+
+        encoder.set_width(decoder.width());
+        encoder.set_height(decoder.height());
+        encoder.set_frame_rate(decoder.frame_rate());
+        encoder.set_time_base(Rational::new(25, 1));
+        encoder.set_format(Pixel::RGB24);
+        encoder.set_max_b_frames(1);
+        let mut encoder = encoder.open()?;
 
         let mut scaler = Context::get(
             decoder.format(),
@@ -39,7 +51,12 @@ fn main() -> Result<(), ffmpeg::Error> {
                 while decoder.receive_frame(&mut decoded).is_ok() {
                     let mut rgb_frame = Video::empty();
                     scaler.run(&decoded, &mut rgb_frame)?;
-                    save_file(&rgb_frame, frame_index).unwrap();
+                    println!(
+                        "--> got frame {:?} {:?}",
+                        decoded.format(),
+                        rgb_frame.format()
+                    );
+                    save_file(&rgb_frame, &mut encoder, frame_index).unwrap();
                     frame_index += 1;
                 }
                 Ok(())
@@ -58,9 +75,30 @@ fn main() -> Result<(), ffmpeg::Error> {
     Ok(())
 }
 
-fn save_file(frame: &Video, index: usize) -> std::result::Result<(), std::io::Error> {
-    let mut file = File::create(format!("frame{}.ppm", index))?;
-    file.write_all(format!("P6\n{} {}\n255\n", frame.width(), frame.height()).as_bytes())?;
-    file.write_all(frame.data(0))?;
+// fn save_file(frame: &Video, index: usize) -> std::result::Result<(), std::io::Error> {
+//     let mut file = File::create(format!("frame{}.ppm", index))?;
+//     file.write_all(format!("P6\n{} {}\n255\n", frame.width(), frame.height()).as_bytes())?;
+//     file.write_all(frame.data(0))?;
+//     Ok(())
+// }
+
+fn save_file(
+    frame: &Video,
+    encoder: &mut ffmpeg::encoder::video::Video,
+    index: usize,
+) -> std::result::Result<(), std::io::Error> {
+    let mut encoded = ffmpeg::Packet::empty();
+    let mut file = File::create(format!("frame{}.png", index))?;
+
+    encoder.send_frame(frame)?;
+
+    while encoder.receive_packet(&mut encoded).is_ok() {
+        println!("--> got {}", encoded.size());
+        encoded.set_stream(0);
+        file.write_all(encoded.data().unwrap_or(&[]))?;
+    }
+
+    panic!("....");
+
     Ok(())
 }
