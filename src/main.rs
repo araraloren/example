@@ -1,83 +1,66 @@
-use encoding_rs::GBK;
-use local_encoding::Encoder;
-use local_encoding::Encoding;
-use std::env::current_dir;
-use std::ffi::CString;
-use windows::core::*;
-use windows::Win32::Foundation::*;
-use windows::Win32::Storage::FileSystem::*;
-use windows::Win32::System::Threading::*;
-use windows::Win32::System::IO::*;
+extern crate ffmpeg_next as ffmpeg;
 
-use crate::ParamValue::*;
+use ffmpeg::format::{input, Pixel};
+use ffmpeg::media::Type;
+use ffmpeg::software::scaling::{context::Context, flag::Flags};
+use ffmpeg::util::frame::video::Video;
+use std::env;
+use std::fs::File;
+use std::io::prelude::*;
 
-fn main() -> Result<()> {
-    let filename = current_dir().unwrap();
-    let filename = filename.join("信息.txt");
+fn main() -> Result<(), ffmpeg::Error> {
+    ffmpeg::init().unwrap();
 
-    let mut string = filename.as_path().to_str().unwrap().to_owned();
+    if let Ok(mut ictx) = input(&env::args().nth(1).expect("Cannot open file.")) {
+        let input = ictx
+            .streams()
+            .best(Type::Video)
+            .ok_or(ffmpeg::Error::StreamNotFound)?;
+        let video_stream_index = input.index();
 
-    string.push('\0');
-    let string1 = CString::from_vec_with_nul(string.as_bytes().to_vec()).unwrap();
+        let context_decoder = ffmpeg::codec::context::Context::from_parameters(input.parameters())?;
+        let mut decoder = context_decoder.decoder().video()?;
 
-    let encode = Encoding::ANSI
-        .to_bytes("E:\\Rust\\example-ol\\信息.txt\0")
-        .unwrap();
-    let string2 = CString::from_vec_with_nul(encode).unwrap();
+        let mut scaler = Context::get(
+            decoder.format(),
+            decoder.width(),
+            decoder.height(),
+            Pixel::RGB24,
+            decoder.width(),
+            decoder.height(),
+            Flags::BILINEAR,
+        )?;
 
-    let mut val = filename.as_os_str().as_encoded_bytes().to_vec();
+        let mut frame_index = 0;
 
-    val.push(0);
-    let string3 = CString::from_vec_with_nul(val).unwrap();
+        let mut receive_and_process_decoded_frames =
+            |decoder: &mut ffmpeg::decoder::Video| -> Result<(), ffmpeg::Error> {
+                let mut decoded = Video::empty();
+                while decoder.receive_frame(&mut decoded).is_ok() {
+                    let mut rgb_frame = Video::empty();
+                    scaler.run(&decoded, &mut rgb_frame)?;
+                    save_file(&rgb_frame, frame_index).unwrap();
+                    frame_index += 1;
+                }
+                Ok(())
+            };
 
-    let (encode, _, _) = GBK.encode("E:\\Rust\\example-ol\\信息.txt\0");
-    let string2 = CString::from_vec_with_nul(encode.to_vec()).unwrap();
-
-    println!("try to reading file {filename:?} --> ");
-    println!("1 `{string1:?}`");
-    println!("1 `{string2:?}`");
-    println!("1 `{string3:?}`");
-
-    let file = Owned(unsafe {
-        CreateFileA(
-            PCSTR(string2.as_ptr().cast()),
-            FILE_GENERIC_READ.0,
-            FILE_SHARE_READ,
-            None,
-            OPEN_EXISTING,
-            FILE_FLAG_OVERLAPPED,
-            None,
-        )?
-    });
-    let mut overlapped = OVERLAPPED {
-        Internal: 0,
-        InternalHigh: 0,
-        Anonymous: OVERLAPPED_0 {
-            Anonymous: OVERLAPPED_0_0 {
-                Offset: 9,
-                OffsetHigh: 0,
-            },
-        },
-        hEvent: unsafe { CreateEventA(None, true, false, None)? },
-    };
-    let mut buffer: [u8; 12] = Default::default();
-
-    if let Err(e) = unsafe { ReadFile(file.abi(), Some(&mut buffer), None, Some(&mut overlapped)) }
-    {
-        assert_eq!(e.code(), ERROR_IO_PENDING.into());
+        for (stream, packet) in ictx.packets() {
+            if stream.index() == video_stream_index {
+                decoder.send_packet(&packet)?;
+                receive_and_process_decoded_frames(&mut decoder)?;
+            }
+        }
+        decoder.send_eof()?;
+        receive_and_process_decoded_frames(&mut decoder)?;
     }
 
-    unsafe {
-        WaitForSingleObject(overlapped.hEvent, 2000);
-    }
-    let mut byte_copied = 0;
+    Ok(())
+}
 
-    unsafe {
-        GetOverlappedResult(file.abi(), &overlapped, &mut byte_copied, false)?;
-    }
-    assert_eq!(byte_copied, 12);
-
-    println!("--:> `{}`", String::from_utf8_lossy(&buffer));
-
+fn save_file(frame: &Video, index: usize) -> std::result::Result<(), std::io::Error> {
+    let mut file = File::create(format!("frame{}.ppm", index))?;
+    file.write_all(format!("P6\n{} {}\n255\n", frame.width(), frame.height()).as_bytes())?;
+    file.write_all(frame.data(0))?;
     Ok(())
 }
