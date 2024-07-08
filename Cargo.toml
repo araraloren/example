@@ -1,12 +1,11 @@
-[package]
-name = "decode-video"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+resolver = "2"
+members = [
+    "packages/axum-desktop",
+    "packages/axum-server",
+    "packages/axum-website",
+]
 
-[dependencies]
-ffmpeg-next = "7.0.0"
-iced = { git = "https://github.com/iced-rs/iced", version = "0.13.0-dev", features = ["image", "tokio"] }
-tokio = { version = "1.37.0", features = ["full"] }
-
-[profile.release]
-lto = true
+[workspace.dependencies]
+axum-server = { path = "packages/axum-server", version = "0.1.0" }
+dioxus = { git = "https://github.com/DioxusLabs/dioxus", version = "0.5.2" }

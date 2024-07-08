@@ -1,0 +1,32 @@
+[package]
+name = "axum-desktop"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+dioxus = { workspace = true, features = [
+    "launch",
+    "fullstack",
+] }
+axum-server = { workspace = true }
+axum = { version = "0.7", optional = true }
+tokio = { version = "1.38", features = [
+    "full",
+], optional = true }
+serde = "1.0.159"
+
+[features]
+default = []
+server = ["axum", "tokio", "dioxus/axum"]
+client = ["dioxus/desktop"]
+
+[[bin]]
+name = "client"
+path = "src/client.rs"
+required-features = ["client"]
+
+[[bin]]
+name = "server"
+path = "src/server.rs"
+required-features = ["server"]
