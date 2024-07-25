@@ -396,4 +396,20 @@ impl Message {
         .map(String::from)
         .to_vec()
     }
+
+    pub fn construct_header() -> Vec<String> {
+        [
+            "名称",
+            "IP",
+            "状态",
+            "总时间",
+            "DNS时间",
+            "连接时间",
+            "下载时间",
+            "重定向",
+            "重定向时间",
+        ]
+        .map(String::from)
+        .to_vec()
+    }
 }

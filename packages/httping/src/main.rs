@@ -15,6 +15,7 @@ async fn main() -> color_eyre::Result<()> {
     let messages = cli.query().await?;
     let mut table = Table::new();
 
+    table.add_row(Row::from_iter(httpinglib::Message::construct_header()));
     if !messages.is_empty() {
         messages
             .iter()
@@ -22,7 +23,7 @@ async fn main() -> color_eyre::Result<()> {
             .for_each(|v| {
                 table.add_row(Row::from_iter(v));
             });
-
+        table.add_row(Row::from_iter(httpinglib::Message::construct_header()));
         table.printstd();
     }
 
