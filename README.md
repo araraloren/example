@@ -1,16 +1,22 @@
 
-# An example of dioxus fullstack
+# Ping test
 
-## for desktop
+## Running
 
-`cd packages/axum-desktop`
+`cargo r -- www.baidu.com` or `cargo r --bin httping www.baidu.com`
 
-Start server `cargo r --server --features server`.
+## Help
 
-Runing `cargo r --bin client --features client`.
+```
+Usage: httping [-k, --key] [-d, --debug] [-v, --verbose] [ARGS]
 
-## for web
+Options:
+  -k, --key          Set the key of request ["token_20230313000136kwyktxb0tgspm00yo5"]
+  -d, --debug        Enable debug mode
+  -v, --verbose      Enable verbose mode
 
-`cd packages/axum-website`
+Args:
+  host@1      The target url, for example: www.baidu.com
 
-Running server `dx serve --platform fullstack`.
+Create by araraloren v0.1.0
+```
