@@ -101,6 +101,10 @@ impl Httping {
                 }
             }
         }
+
+        if self.debug {
+            eprintln!("Received message count = {}", messages.len());
+        }
         Ok(messages)
     }
 }
