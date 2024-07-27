@@ -1,20 +1,19 @@
 
 [package]
 name = "tokio_tungstenite_bug"
+version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-futures-util = "0.3.30"
-tokio = { version = "1.39", features = ["full"] }
-color-eyre = { version = "0.6" }
-tokio-tungstenite = { version = "0.23.1", features = [
-    "rustls-tls-webpki-roots",
-] }
-rustls = { version = "0.23.12", features = [
+color-eyre = "0.6.2"
+rustls = { version = "0.23.12", default-features = false, features = [
     "std",
     "tls12",
     "ring",
 ] }
-tracing-subscriber = { version = "0.3", features = [
+tracing-subscriber = { version = "0.3.17", features = [
     "env-filter",
 ] }
+tokio = { version = "1.39", features = ["full"] }
+futures-util = "0.3.30"
+tokio-native-tls = { version = "0.3" }

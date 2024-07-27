@@ -1,15 +1,7 @@
-use std::str::FromStr;
-
-use futures_util::StreamExt;
-use futures_util::{SinkExt, TryStreamExt};
-use rustls::crypto::ring;
-use tokio_tungstenite::connect_async;
-use tokio_tungstenite::tungstenite::handshake::client::generate_key;
-use tokio_tungstenite::tungstenite::http::header::{
-    HOST, SEC_WEBSOCKET_KEY, SEC_WEBSOCKET_VERSION, UPGRADE,
-};
-use tokio_tungstenite::tungstenite::http::{Request, Uri};
-use tokio_tungstenite::tungstenite::Message;
+use std::net::ToSocketAddrs;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpStream;
+use tokio_native_tls::native_tls::TlsConnector;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -17,54 +9,41 @@ async fn main() -> color_eyre::Result<()> {
     tracing_subscriber::fmt::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
-    ring::default_provider().install_default().unwrap();
 
-    request("wss://echo.websocket.org").await?;
-    request("wss://www.itdog.cn/websockets").await?;
+    println!("---------  Request echo `echo.websocket.org`...");
+    request("echo.websocket.org").await?;
+    println!("---------  Request itdog `www.itdog.cn`...");
+    request("www.itdog.cn").await?;
 
     Ok(())
 }
 
-pub async fn request(url: &str) -> color_eyre::Result<()> {
-    // Creates a GET request, upgrades and sends it.
-    let url = Uri::from_str(url)?;
-    let req = Request::get(&url)
-        .header("Connection", "Upgrade")
-        .header(HOST, url.host().unwrap())
-        .header(UPGRADE, "websocket")
-        .header(SEC_WEBSOCKET_VERSION, "13")
-        .header(SEC_WEBSOCKET_KEY, generate_key())
-        .body(())?;
+pub async fn request(host: &str) -> color_eyre::Result<()> {
+    let addr = &format!("{}:443", host).to_socket_addrs()?.next().unwrap();
+    let socket = TcpStream::connect(&addr).await?;
+    let connector = TlsConnector::builder().build()?;
+    let connector = tokio_native_tls::TlsConnector::from(connector);
 
-    println!(" --> {req:?}");
+    let mut socket = connector.connect(host, socket).await?;
 
-    let (ws_stream, _) = connect_async(req).await?;
+    let data = format!("\
+         GET /websockets HTTP/1.0\r\n\
+         Host: {}\r\n\
+        Upgrade: websocket\r\n\
+        Connection: Upgrade\r\n\
+        Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\
+        Sec-WebSocket-Version: 13\r\n\
+        Origin: https://{}\r\n\
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0\r\n\
+         \r\n\
+         ", host, host);
 
-    println!("-- connected!");
+    socket.write_all(data.as_bytes()).await?;
 
-    let (mut writer, mut reader) = ws_stream.split();
+    let mut data = Vec::new();
+    socket.read_to_end(&mut data).await?;
 
-    writer
-        .send(Message::Text(String::from(
-            r#"{"task_id":"202407262337451c6sowxc36q865nb5p","task_token":"bd4c908a626dc75c"}"#,
-        )))
-        .await?;
-
-    // The WebSocket is also a `TryStream` over `Message`s.
-    while let Some(message) = reader.try_next().await? {
-        eprintln!("Got message: {message:?}");
-
-        if let Message::Text(text) = &message {
-            if text.contains("task_id") || text.contains("finished") {
-                drop(reader);
-                break;
-            }
-        } else if let Message::Close(_) = &message {
-            break;
-        }
-    }
-
-    println!("Done!");
+    println!("{}", String::from_utf8_lossy(&data[..]));
 
     Ok(())
 }
