@@ -40,6 +40,8 @@ pub async fn request(url: &str) -> color_eyre::Result<()> {
 
     let (ws_stream, _) = connect_async(req).await?;
 
+    println!("-- connected!");
+
     let (mut writer, mut reader) = ws_stream.split();
 
     writer
