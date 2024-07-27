@@ -16,4 +16,5 @@ tracing-subscriber = { version = "0.3.17", features = [
 ] }
 tokio = { version = "1.39", features = ["full"] }
 futures-util = "0.3.30"
-tokio-native-tls = { version = "0.3" }
+tokio-rustls = { version = "0.26" }
+webpki-roots = "0.26"

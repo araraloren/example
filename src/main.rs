@@ -1,7 +1,10 @@
+use rustls::{ClientConfig, RootCertStore};
 use std::net::ToSocketAddrs;
+use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
-use tokio_native_tls::native_tls::TlsConnector;
+use tokio_rustls::TlsConnector;
+use webpki_roots::TLS_SERVER_ROOTS;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -9,6 +12,9 @@ async fn main() -> color_eyre::Result<()> {
     tracing_subscriber::fmt::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .unwrap();
 
     println!("---------  Request echo `echo.websocket.org`...");
     request("echo.websocket.org").await?;
@@ -21,10 +27,13 @@ async fn main() -> color_eyre::Result<()> {
 pub async fn request(host: &str) -> color_eyre::Result<()> {
     let addr = &format!("{}:443", host).to_socket_addrs()?.next().unwrap();
     let socket = TcpStream::connect(&addr).await?;
-    let connector = TlsConnector::builder().build()?;
-    let connector = tokio_native_tls::TlsConnector::from(connector);
+    let config = ClientConfig::builder()
+        .with_root_certificates(RootCertStore::from_iter(TLS_SERVER_ROOTS.iter().cloned()))
+        .with_no_client_auth();
+    let connector = TlsConnector::from(Arc::new(config));
+    let server_name = tokio_rustls::rustls::pki_types::ServerName::try_from(host)?.to_owned();
 
-    let mut socket = connector.connect(host, socket).await?;
+    let mut socket = connector.connect(server_name, socket).await?;
 
     let data = format!("\
          GET /websockets HTTP/1.0\r\n\
