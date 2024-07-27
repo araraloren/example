@@ -15,6 +15,7 @@ color-eyre.workspace = true
 httpinglib.workspace = true
 prettytable-rs.workspace = true
 cote.workspace = true
+tracing-subscriber.workspace = true
 
 [[bin]]
 name = "itdog"

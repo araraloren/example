@@ -10,6 +10,9 @@ const KEY: &str = "token_20230313000136kwyktxb0tgspm00yo5";
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
+    tracing_subscriber::fmt::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
 
     let cli = Httping::parse_env()?;
     let messages = cli.query().await?;
