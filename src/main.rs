@@ -1,8 +1,6 @@
-use std::str::FromStr;
-
 use futures_util::StreamExt;
 use futures_util::{SinkExt, TryStreamExt};
-use reqwest_websocket::RequestBuilderExt;
+
 use rustls::crypto::ring;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Message;
