@@ -57,13 +57,7 @@ pub async fn request(url: &str) -> color_eyre::Result<()> {
 }
 
 pub async fn request_reqw(url: &str) -> color_eyre::Result<()> {
-    let req = reqwest::Client::builder()
-        .build()?
-        .get(url)
-        .upgrade()
-        .send()
-        .await?;
-    let web_socket = req.into_websocket().await?;
+    let web_socket = reqwest_websocket::websocket(url).await?;
 
     println!("REQW: -- connected!");
 
