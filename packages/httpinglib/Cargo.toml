@@ -10,4 +10,3 @@ futures-util.workspace = true
 md-5.workspace = true
 color-eyre.workspace = true
 serde.workspace = true
-chksum.workspace = true
