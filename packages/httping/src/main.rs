@@ -102,13 +102,13 @@ impl Httping {
 
         // The WebSocket is also a `TryStream` over `Message`s.
         while let Ok(message) = websocket.read_frame().await {
-            if self.debug && self.verbose {
-                eprintln!("Got message: {:?}", message.opcode);
-            }
             match message.opcode {
                 fastwebsockets::OpCode::Text => {
                     let text = String::from_utf8(message.payload.to_vec())?;
 
+                    if self.debug && self.verbose {
+                        eprintln!("Got message: {}", text);
+                    }
                     if text.contains("\"type\":\"finished\"") {
                         break;
                     } else {
