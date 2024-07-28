@@ -274,7 +274,7 @@ impl ReqClient {
         .join("&");
 
         if self.debug {
-            println!("Body: {body}");
+            eprintln!("Body: {body}");
         }
 
         req_builder = req_builder.body(body);
@@ -286,8 +286,17 @@ impl ReqClient {
         let task_id = Self::find_task_id(&html, "task_id=")
             .ok_or_else(|| color_eyre::eyre::eyre!("Can not find task_id in result page"))?;
 
+        if self.debug {
+            eprintln!("Got task id = {}", task_id);
+        }
+
         // cacluate the md5
         let md5 = Self::generate_md5(task_id, &self.key);
+
+        if self.debug {
+            eprintln!("Got md5 of $taskid$key = {}", md5);
+        }
+
         let token = md5
             .get(self.beg..self.end)
             .ok_or_else(|| color_eyre::eyre::eyre!("Out of range, md5 string = `{}`", md5))?;
@@ -307,18 +316,13 @@ impl ReqClient {
     }
 
     pub fn generate_md5(task_id: &str, key: &str) -> String {
-        use md5::digest::generic_array::functional::FunctionalSequence;
         use md5::Digest;
 
         let mut hasher = md5::Md5::new();
 
         hasher.update(task_id);
         hasher.update(key);
-        hasher
-            .finalize()
-            .map(|v| format!("{:x}", v))
-            .to_vec()
-            .join("")
+        format!("{:x}", hasher.finalize())
     }
 }
 

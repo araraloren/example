@@ -55,7 +55,7 @@ impl Httping {
         let pingmsg = reqc.req_wssocket_msg("https://www.itdog.cn/http/").await?;
 
         if self.debug {
-            println!("Ping message: {pingmsg}");
+            eprintln!("Ping message: {pingmsg}");
         }
 
         // Prepare a tls connection
