@@ -2,27 +2,19 @@
 name = "httping"
 version = "0.1.0"
 edition = "2021"
-authors = ["araraloren"]
-default = "itdog"
+default = "httping"
 
 [dependencies]
-tokio.workspace = true
-reqwest.workspace = true
-futures-util.workspace = true
-md-5.workspace = true
+ratatui.workspace = true
 color-eyre.workspace = true
-httpinglib.workspace = true
-prettytable-rs.workspace = true
-cote.workspace = true
-tracing-subscriber.workspace = true
-rustls.workspace = true
-webpki-roots.workspace = true
-fastwebsockets.workspace = true
-tokio-rustls.workspace = true
-http.workspace = true
-hyper.workspace = true
-serde_json.workspace = true
+tokio.workspace = true
+async-trait.workspace = true
+itdog.workspace = true
+
+[profile.release]
+lto = true
+codegen-units = 1
 
 [[bin]]
-name = "itdog"
-path = "src/main.rs"
+name = "httping"
+path = "bin/main.rs"

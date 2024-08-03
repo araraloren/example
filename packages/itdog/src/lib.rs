@@ -1,62 +1,78 @@
+mod req;
+
 use std::sync::Arc;
 
 use fastwebsockets::handshake;
 use fastwebsockets::FragmentCollector;
 use fastwebsockets::Frame;
-use httpinglib::ReqClient;
-use prettytable::Row;
-use prettytable::Table;
 use reqwest::header::CONNECTION;
 use reqwest::header::HOST;
 use reqwest::header::SEC_WEBSOCKET_KEY;
 use reqwest::header::SEC_WEBSOCKET_VERSION;
 use reqwest::header::UPGRADE;
 use rustls::ClientConfig;
-use std::future::Future;
-use tokio_rustls::TlsConnector;
-
-const KEY: &str = "token_20230313000136kwyktxb0tgspm00yo5";
-
-use cote::prelude::*;
 use rustls::RootCertStore;
+use std::future::Future;
 use tokio::net::TcpStream;
+use tokio::sync::mpsc::Sender;
+use tokio::sync::oneshot::Receiver;
+use tokio_rustls::TlsConnector;
+use tracing::debug;
+use tracing::trace;
 
-#[derive(Debug, Cote)]
-#[cote(aborthelp, width = 100)]
-pub struct Httping {
-    /// Set the key of request
-    #[arg(alias = "-k", value = KEY)]
-    key: String,
+pub const DEFAULT_KEY: &str = "token_20230313000136kwyktxb0tgspm00yo5";
 
-    /// The target url, for example: www.baidu.com
-    #[pos(force = true)]
-    host: String,
+pub use req::Message;
+pub use req::ReqClient;
 
-    /// Enable debug mode
-    #[arg(alias = "-d")]
-    debug: bool,
+#[derive(Debug)]
+pub struct ItdogClient<'a> {
+    key: &'a str,
 
-    /// Enable verbose mode
-    #[arg(alias = "-v")]
-    verbose: bool,
+    host: &'a str,
+
+    cancell: Receiver<bool>,
+
+    respone: Sender<req::Message>,
 }
 
-impl Httping {
-    pub async fn query(&self) -> color_eyre::Result<Vec<httpinglib::Message>> {
+macro_rules! return_if_cancell {
+    ($_self:ident) => {
+        if let Ok(flag) = $_self.cancell.try_recv() {
+            if flag {
+                return Ok(());
+            }
+        }
+    };
+}
+
+impl<'a> ItdogClient<'a> {
+    pub fn new(
+        key: &'a str,
+        host: &'a str,
+        cancell: Receiver<bool>,
+        respone: Sender<req::Message>,
+    ) -> Self {
+        Self {
+            key,
+            host,
+            cancell,
+            respone,
+        }
+    }
+
+    pub async fn query(&mut self) -> color_eyre::Result<()> {
         let cli = reqwest::ClientBuilder::new().cookie_store(true).build()?;
         let server_host = "www.itdog.cn";
 
-        if self.debug {
-            eprintln!("Try to httping host {}", self.host);
-        }
+        debug!("try to httping host `{}`", self.host);
+        return_if_cancell!(self);
 
-        let reqc = ReqClient::new(cli, &self.key, &self.host).with_debug(self.debug);
-
+        let reqc = req::ReqClient::new(cli, self.key, self.host);
         let pingmsg = reqc.req_wssocket_msg("https://www.itdog.cn/http/").await?;
 
-        if self.debug {
-            eprintln!("Ping message: {pingmsg}");
-        }
+        debug!("construct ping message `{pingmsg}`");
+        return_if_cancell!(self);
 
         // Prepare a tls connection
         let tcp_stream = TcpStream::connect(&format!("{}:443", server_host)).await?;
@@ -66,6 +82,10 @@ impl Httping {
             ))
             .with_no_client_auth();
         let tls_connector = TlsConnector::from(Arc::new(config));
+
+        debug!("construct tls connector");
+        return_if_cancell!(self);
+
         let server_name =
             tokio_rustls::rustls::pki_types::ServerName::try_from(server_host)?.to_owned();
         let tls_stream = tls_connector.connect(server_name, tcp_stream).await?;
@@ -84,21 +104,23 @@ impl Httping {
         let (parts, _) = request.into_parts();
         let request = http::Request::from_parts(parts, String::default());
 
+        debug!("construct http request: `{request:?}`");
+        return_if_cancell!(self);
+
         let (websocket, _) = handshake::client(&SpawnExecutor, request, tls_stream).await?;
         let mut websocket = FragmentCollector::new(websocket);
 
-        // The WebSocket implements `Sink<Message>`.
+        debug!("sending payload message to websocket");
         websocket
             .write_frame(Frame::text(fastwebsockets::Payload::Borrowed(
                 pingmsg.as_bytes(),
             )))
             .await?;
 
-        let mut messages: Vec<httpinglib::Message> = vec![];
+        debug!("waiting for server reply..");
+        return_if_cancell!(self);
 
-        if self.debug {
-            eprintln!("Waiting for reply..");
-        }
+        let mut count = 0;
 
         // The WebSocket is also a `TryStream` over `Message`s.
         while let Ok(message) = websocket.read_frame().await {
@@ -106,30 +128,40 @@ impl Httping {
                 fastwebsockets::OpCode::Text => {
                     let text = String::from_utf8(message.payload.to_vec())?;
 
-                    if self.debug && self.verbose {
-                        eprintln!("Got message: {}", text);
-                    }
+                    count += 1;
+                    trace!("got text message {count}: {}", text);
+
                     if text.contains("\"type\":\"finished\"") {
                         break;
                     } else {
-                        messages.push(serde_json::from_str(&text)?);
+                        self.respone.send(serde_json::from_str(&text)?).await?;
                     }
                 }
                 fastwebsockets::OpCode::Close => {
                     break;
                 }
-                _ => {}
+                fastwebsockets::OpCode::Continuation => {
+                    println!("........?");
+                }
+                fastwebsockets::OpCode::Binary => {
+                    println!("...........?");
+                }
+                _ => {
+                    println!("..................................");
+                }
             }
+            return_if_cancell!(self);
         }
+
+        debug!("sending close message to websocket");
 
         websocket
             .write_frame(Frame::close_raw(vec![].into()))
             .await?;
 
-        if self.debug {
-            eprintln!("Received message count = {}", messages.len());
-        }
-        Ok(messages)
+        debug!("done! received text message count = {count}");
+
+        Ok(())
     }
 }
 
@@ -143,33 +175,4 @@ where
     fn execute(&self, fut: Fut) {
         tokio::task::spawn(fut);
     }
-}
-
-#[tokio::main]
-async fn main() -> color_eyre::Result<()> {
-    color_eyre::install()?;
-    tracing_subscriber::fmt::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-        .init();
-    rustls::crypto::ring::default_provider()
-        .install_default()
-        .unwrap();
-
-    let cli = Httping::parse_env()?;
-    let messages = cli.query().await?;
-    let mut table = Table::new();
-
-    table.add_row(Row::from_iter(httpinglib::Message::construct_header()));
-    if !messages.is_empty() {
-        messages
-            .iter()
-            .map(|msg| msg.construct_row())
-            .for_each(|v| {
-                table.add_row(Row::from_iter(v));
-            });
-        table.add_row(Row::from_iter(httpinglib::Message::construct_header()));
-        table.printstd();
-    }
-
-    Ok(())
 }
