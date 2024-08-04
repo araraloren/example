@@ -13,6 +13,7 @@ use tokio::runtime::Runtime;
 use httping::PingServer;
 use httping::Task;
 use tracing::debug;
+use tracing::trace;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum DisplayStyle {
@@ -48,6 +49,7 @@ pub struct App {
     display_style: DisplayStyle,
     task_index: ListState,
     task_list: Vec<Task>,
+    total_index: usize,
     resp_index: TableState,
     server_index: ListState,
     server_list: Vec<Arc<dyn PingServer + Send + Sync>>,
@@ -62,8 +64,9 @@ impl Default for App {
             task_index: ListState::default(),
             cache: String::default(),
             editing: false,
+            total_index: 0,
             resp_index: TableState::default(),
-            display_style: DisplayStyle::Table,
+            display_style: DisplayStyle::Total,
             runtime: Builder::new_multi_thread().enable_all().build().unwrap(),
         }
     }
@@ -198,7 +201,7 @@ impl App {
             let task = &self.task_list[selected];
             let respone_list = task.respone();
 
-            debug!("task list count = {}", self.task_list.len());
+            trace!("task list count = {}", self.task_list.len());
             if !respone_list.is_empty() {
                 let default_header = ["地址", "IP", "状态", "总耗时", "重定向", "重定向耗时"];
 
@@ -222,23 +225,64 @@ impl App {
                                 rows.extend(
                                     respone.other_cost_list().iter().cloned().map(Text::from),
                                 );
-                                Row::new(rows)
+                                Row::new(rows).height(2)
                             })
                             .collect();
 
                         let table = Table::new(rows, widths)
                             .column_spacing(2)
                             .header(Row::new(header.into_iter().map(|v| Text::from(v).bold())))
-                            .highlight_style(Style::new().reversed())
+                            .highlight_style(Style::new().reversed().fg(Color::Magenta))
                             .block(
                                 Block::bordered()
                                     .title("Respone")
                                     .title_alignment(Alignment::Center),
                             );
 
+                        if self.resp_index.selected().is_none() {
+                            self.resp_index.select(Some(0));
+                        }
                         frame.render_stateful_widget(table, resp_layout, &mut self.resp_index);
                     }
-                    DisplayStyle::Total => todo!(),
+                    DisplayStyle::Total => {
+                        let mut total_max = 0;
+                        let data: Vec<_> = respone_list[self.total_index..]
+                            .iter()
+                            .map(|resp| {
+                                let total =
+                                    resp.total_cost().replace(".", "").parse::<u64>().unwrap();
+
+                                if total > total_max {
+                                    total_max = total;
+                                }
+
+                                Bar::default()
+                                    .value(total)
+                                    .text_value(String::default())
+                                    .label(Line::from(format!(
+                                        "{}s @{}/{} {}",
+                                        resp.total_cost(),
+                                        resp.loc(),
+                                        resp.ip(),
+                                        resp.status()
+                                    )))
+                            })
+                            .collect();
+                        let bart_chart = BarChart::default()
+                            .block(
+                                Block::bordered()
+                                    .title("Total Time")
+                                    .title_alignment(Alignment::Center),
+                            )
+                            .direction(Direction::Horizontal)
+                            .bar_width(1)
+                            .bar_style(Style::new().yellow().on_red())
+                            .label_style(Style::new().white())
+                            .data(BarGroup::default().bars(&data))
+                            .max(total_max.max(4));
+
+                        frame.render_widget(bart_chart, resp_layout);
+                    }
                     DisplayStyle::Chart(_) => todo!(),
                 }
             }
@@ -314,22 +358,47 @@ impl App {
                         KeyCode::Right => {
                             self.server_index.select_next();
                         }
-                        KeyCode::PageUp => {
-                            if self.resp_index.offset() > 5 {
-                                *self.resp_index.offset_mut() = self.resp_index.offset() - 5;
-                            } else {
-                                *self.resp_index.offset_mut() = 0;
+                        KeyCode::PageUp => match self.display_style {
+                            DisplayStyle::Table => {
+                                if self.resp_index.offset() > 5 {
+                                    *self.resp_index.offset_mut() = self.resp_index.offset() - 5;
+                                } else {
+                                    *self.resp_index.offset_mut() = 0;
+                                }
+                                self.resp_index.select(Some(self.resp_index.offset()));
                             }
-                        }
-                        KeyCode::PageDown => {
-                            if let Some(selected) = self.task_index.selected() {
-                                let resp_len = self.task_list[selected].respone().len();
-
-                                if self.resp_index.offset() + 5 < resp_len {
-                                    *self.resp_index.offset_mut() = self.resp_index.offset() + 5;
+                            DisplayStyle::Total => {
+                                if self.total_index > 5 {
+                                    self.total_index -= 5;
+                                } else {
+                                    self.total_index = 0;
                                 }
                             }
-                        }
+                            DisplayStyle::Chart(_) => todo!(),
+                        },
+                        KeyCode::PageDown => match self.display_style {
+                            DisplayStyle::Table => {
+                                if let Some(selected) = self.task_index.selected() {
+                                    let resp_len = self.task_list[selected].respone().len();
+
+                                    if self.resp_index.offset() + 5 < resp_len {
+                                        *self.resp_index.offset_mut() =
+                                            self.resp_index.offset() + 5;
+                                    }
+                                }
+                                self.resp_index.select(Some(self.resp_index.offset()));
+                            }
+                            DisplayStyle::Total => {
+                                if let Some(selected) = self.task_index.selected() {
+                                    let resp_len = self.task_list[selected].respone().len();
+
+                                    if self.total_index + 5 < resp_len {
+                                        self.total_index += 5;
+                                    }
+                                }
+                            }
+                            DisplayStyle::Chart(_) => todo!(),
+                        },
                         _ => {}
                     }
                 } else {

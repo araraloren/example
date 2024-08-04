@@ -28,8 +28,13 @@ pub struct Httping {
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
+    let subscriber = tracing_subscriber::fmt::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .with_filter_reloading();
+    let reload_handler = subscriber.reload_handle();
 
-    let mut subscriber = tracing_subscriber::fmt::fmt();
+    subscriber.init();
+
     let Httping {
         key,
         host,
@@ -38,13 +43,16 @@ async fn main() -> color_eyre::Result<()> {
     } = Httping::parse_env()?;
 
     if verbose {
-        subscriber = subscriber.with_max_level(LevelFilter::TRACE);
+        reload_handler.modify(|filter| {
+            *filter = tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive(LevelFilter::TRACE.into());
+        })?;
     } else if debug {
-        subscriber = subscriber.with_max_level(LevelFilter::DEBUG);
+        reload_handler.modify(|filter| {
+            *filter = tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive(LevelFilter::DEBUG.into());
+        })?;
     }
-    subscriber
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-        .init();
     rustls::crypto::ring::default_provider()
         .install_default()
         .unwrap();

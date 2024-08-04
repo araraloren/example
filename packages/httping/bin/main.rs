@@ -33,29 +33,45 @@ fn main() -> color_eyre::Result<()> {
     } = Cli::parse_env()?;
 
     if let Some(path) = log {
-        let mut subscriber = tracing_subscriber::fmt();
         let file = std::fs::File::create(path)?;
-
-        if verbose {
-            subscriber = subscriber.with_max_level(LevelFilter::TRACE);
-        } else if debug {
-            subscriber = subscriber.with_max_level(LevelFilter::DEBUG);
-        }
-        subscriber
+        let subscriber = tracing_subscriber::fmt::fmt()
             .with_writer(file)
             .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-            .init();
-    } else {
-        let mut subscriber = tracing_subscriber::fmt();
+            .with_filter_reloading();
+        let reload_handler = subscriber.reload_handle();
+
+        subscriber.init();
 
         if verbose {
-            subscriber = subscriber.with_max_level(LevelFilter::TRACE);
+            reload_handler.modify(|filter| {
+                *filter = tracing_subscriber::EnvFilter::from_default_env()
+                    .add_directive(LevelFilter::TRACE.into());
+            })?;
         } else if debug {
-            subscriber = subscriber.with_max_level(LevelFilter::DEBUG);
+            reload_handler.modify(|filter| {
+                *filter = tracing_subscriber::EnvFilter::from_default_env()
+                    .add_directive(LevelFilter::DEBUG.into());
+            })?;
         }
-        subscriber
+    } else {
+        let subscriber = tracing_subscriber::fmt::fmt()
             .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-            .init();
+            .with_filter_reloading();
+        let reload_handler = subscriber.reload_handle();
+
+        subscriber.init();
+
+        if verbose {
+            reload_handler.modify(|filter| {
+                *filter = tracing_subscriber::EnvFilter::from_default_env()
+                    .add_directive(LevelFilter::TRACE.into());
+            })?;
+        } else if debug {
+            reload_handler.modify(|filter| {
+                *filter = tracing_subscriber::EnvFilter::from_default_env()
+                    .add_directive(LevelFilter::DEBUG.into());
+            })?;
+        }
     }
 
     let mut ui = Ui::new(stdout())?;
