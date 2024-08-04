@@ -1,6 +1,7 @@
 use itdog::ItdogClient;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::oneshot::Receiver;
+use tracing::{debug, trace};
 
 use super::{PingServer, TaskRespone};
 
@@ -19,6 +20,8 @@ impl PingServer for Itdog {
         resp: Sender<Option<TaskRespone>>,
     ) -> color_eyre::Result<()> {
         let (send, mut recv) = tokio::sync::mpsc::channel(128);
+
+        debug!("start ping request for `{host}`");
 
         tokio::spawn(async move {
             let mut itdog = ItdogClient::new(itdog::DEFAULT_KEY, &host, cancell, send);
@@ -43,6 +46,12 @@ impl PingServer for Itdog {
                         .map(String::from)
                         .to_vec(),
                 );
+
+            trace!(
+                "sending respone ip = `{}`, status = `{}`",
+                msg.ip(),
+                msg.http_code()
+            );
 
             resp.send(Some(task_resp)).await?;
         }

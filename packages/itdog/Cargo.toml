@@ -23,11 +23,6 @@ serde_json.workspace = true
 serde.workspace = true
 tracing.workspace = true
 
-
 [[bin]]
 name = "itdog"
 path = "src/main.rs"
-
-[profile.release]
-lto = true
-codegen-units = 1

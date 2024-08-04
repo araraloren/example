@@ -24,8 +24,10 @@ pub struct Task {
     host: String,
     handler: Option<JoinHandle<color_eyre::Result<()>>>,
     resp: Vec<TaskRespone>,
+
     resp_rx: mpsc::Receiver<Option<TaskRespone>>,
     cancell: Option<oneshot::Sender<bool>>,
+    ending: bool,
 }
 
 impl Task {
@@ -41,6 +43,7 @@ impl Task {
             resp: vec![],
             cancell: Some(cancell),
             resp_rx: respone,
+            ending: false,
         }
     }
 
@@ -61,17 +64,28 @@ impl Task {
         }
     }
 
-    pub fn try_recv(&mut self) -> color_eyre::Result<bool> {
-        if let Some(resp) = self.resp_rx.try_recv()? {
-            self.resp.push(resp);
-            Ok(true)
-        } else {
-            Ok(false)
+    pub fn recv_respone(&mut self) {
+        if !self.ending {
+            let ret = self.resp_rx.try_recv();
+
+            match ret {
+                Ok(Some(resp)) => {
+                    self.resp.push(resp);
+                }
+                Ok(None) => {
+                    self.ending = true;
+                }
+                Err(_) => {}
+            }
         }
     }
 
     pub fn take_handler(&mut self) -> Option<JoinHandle<color_eyre::Result<()>>> {
         self.handler.take()
+    }
+
+    pub fn ending(&self) -> bool {
+        self.ending
     }
 }
 

@@ -37,11 +37,10 @@ async fn main() -> color_eyre::Result<()> {
         verbose,
     } = Httping::parse_env()?;
 
-    if debug {
+    if verbose {
+        subscriber = subscriber.with_max_level(LevelFilter::TRACE);
+    } else if debug {
         subscriber = subscriber.with_max_level(LevelFilter::DEBUG);
-        if verbose {
-            subscriber = subscriber.with_max_level(LevelFilter::TRACE);
-        }
     }
     subscriber
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())

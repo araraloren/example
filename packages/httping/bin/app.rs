@@ -1,6 +1,7 @@
-use std::io;
+use std::io::Write;
 use std::sync::Arc;
 
+use httping::Ui;
 use ratatui::crossterm::event::Event;
 use ratatui::crossterm::event::KeyCode;
 use ratatui::crossterm::event::KeyEventKind;
@@ -11,6 +12,7 @@ use tokio::runtime::Runtime;
 
 use httping::PingServer;
 use httping::Task;
+use tracing::debug;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum DisplayStyle {
@@ -46,6 +48,7 @@ pub struct App {
     display_style: DisplayStyle,
     task_index: ListState,
     task_list: Vec<Task>,
+    resp_index: TableState,
     server_index: ListState,
     server_list: Vec<Arc<dyn PingServer + Send + Sync>>,
 }
@@ -59,8 +62,9 @@ impl Default for App {
             task_index: ListState::default(),
             cache: String::default(),
             editing: false,
+            resp_index: TableState::default(),
             display_style: DisplayStyle::Table,
-            runtime: Builder::new_multi_thread().build().unwrap(),
+            runtime: Builder::new_multi_thread().enable_all().build().unwrap(),
         }
     }
 }
@@ -99,19 +103,29 @@ impl App {
         extract!(title_layout, main_layout, status_layout <- layout[0..3]);
 
         let layout =
+            Layout::horizontal([cons_percentage(50), cons_percentage(50)]).split(status_layout);
+
+        extract!(status_layout, help_layout <- layout[0..2]);
+
+        let layout =
             Layout::horizontal([cons_percentage(30), cons_percentage(70)]).split(main_layout);
 
-        extract!(op_layout, info_layout <- layout[0..2]);
+        extract!(op_layout, resp_layout <- layout[0..2]);
 
-        let layout = Layout::vertical([cons_percentage(70), cons_percentage(30)])
-            .margin(2)
-            .split(op_layout);
+        let layout = Layout::vertical([cons_percentage(70), cons_percentage(30)]).split(op_layout);
 
         extract!(task_layout, input_layout <- layout[0..2]);
 
         let layout = Layout::vertical([cons_min(3), cons_length(3)]).split(input_layout);
 
         extract!(server_layout, text_layout <- layout[0..2]);
+
+        frame.render_widget(
+            Paragraph::new("Httping")
+                .centered()
+                .block(Block::bordered()),
+            title_layout,
+        );
 
         let task_list = List::new(
             self.task_list
@@ -178,9 +192,106 @@ impl App {
                 text_layout.y + 1,
             );
         }
+
+        if !self.task_list.is_empty() {
+            let selected = self.task_index.selected().unwrap_or_default();
+            let task = &self.task_list[selected];
+            let respone_list = task.respone();
+
+            debug!("task list count = {}", self.task_list.len());
+            if !respone_list.is_empty() {
+                let default_header = ["地址", "IP", "状态", "总耗时", "重定向", "重定向耗时"];
+
+                match self.display_style {
+                    DisplayStyle::Table => {
+                        let mut header = default_header.map(String::from).to_vec();
+                        let widths: Vec<Constraint> = vec![];
+
+                        header.extend(respone_list[0].other_name_list().iter().map(String::from));
+                        let rows: Vec<_> = respone_list
+                            .iter()
+                            .map(|respone| {
+                                let mut rows = vec![
+                                    Text::from(respone.loc()),
+                                    Text::from(respone.ip()),
+                                    Text::from(respone.status().to_string()),
+                                    Text::from(respone.total_cost()),
+                                    Text::from(respone.redirect().to_string()),
+                                    Text::from(respone.redirect_cost()),
+                                ];
+                                rows.extend(
+                                    respone.other_cost_list().iter().cloned().map(Text::from),
+                                );
+                                Row::new(rows)
+                            })
+                            .collect();
+
+                        let table = Table::new(rows, widths)
+                            .column_spacing(2)
+                            .header(Row::new(header.into_iter().map(|v| Text::from(v).bold())))
+                            .highlight_style(Style::new().reversed())
+                            .block(
+                                Block::bordered()
+                                    .title("Respone")
+                                    .title_alignment(Alignment::Center),
+                            );
+
+                        frame.render_stateful_widget(table, resp_layout, &mut self.resp_index);
+                    }
+                    DisplayStyle::Total => todo!(),
+                    DisplayStyle::Chart(_) => todo!(),
+                }
+            }
+        } else {
+            frame.render_widget(
+                Paragraph::new("").block(
+                    Block::bordered()
+                        .title("Respone")
+                        .title_alignment(Alignment::Center),
+                ),
+                resp_layout,
+            );
+        }
+
+        let mut status: Vec<Span> = vec![];
+
+        let task_count = self.task_list.len();
+        let task_complete = self.task_list.iter().filter(|task| task.ending()).count();
+
+        status.push(Span::from(format!("Task {}/{}", task_complete, task_count)));
+
+        if let Some(selected) = self.task_index.selected() {
+            let task = &self.task_list[selected];
+            let resp = task.respone();
+            let success = resp.iter().filter(|v| v.status() == 200).count();
+
+            if success > 0 {
+                status.push(Span::from(" | "));
+                status.push(Span::from(format!("Respone {}/{}", success, resp.len())));
+            }
+        }
+
+        frame.render_widget(
+            Paragraph::new(Line::from(status)).block(Block::bordered()),
+            status_layout,
+        );
+
+        frame.render_widget(
+            Paragraph::new(Line::from(vec![
+                Span::from("← → Server"),
+                Span::from(" | "),
+                Span::from("↑ ↓ Task"),
+                Span::from(" | "),
+                Span::from("⇞ ⇟ Respone"),
+                Span::from(" | "),
+                Span::from("E(edit mode)"),
+            ]))
+            .block(Block::bordered()),
+            help_layout,
+        );
     }
 
-    pub fn update(&mut self, event: Event) -> io::Result<bool> {
+    pub fn update(&mut self, event: Event) -> color_eyre::Result<bool> {
         if let Event::Key(key) = event {
             if key.kind == KeyEventKind::Press {
                 if !self.editing {
@@ -191,15 +302,33 @@ impl App {
                         KeyCode::Esc => return Ok(true),
                         KeyCode::Down => {
                             self.task_index.select_next();
+                            self.resp_index = TableState::default();
                         }
                         KeyCode::Up => {
                             self.task_index.select_previous();
+                            self.resp_index = TableState::default();
                         }
                         KeyCode::Left => {
                             self.server_index.select_previous();
                         }
                         KeyCode::Right => {
                             self.server_index.select_next();
+                        }
+                        KeyCode::PageUp => {
+                            if self.resp_index.offset() > 5 {
+                                *self.resp_index.offset_mut() = self.resp_index.offset() - 5;
+                            } else {
+                                *self.resp_index.offset_mut() = 0;
+                            }
+                        }
+                        KeyCode::PageDown => {
+                            if let Some(selected) = self.task_index.selected() {
+                                let resp_len = self.task_list[selected].respone().len();
+
+                                if self.resp_index.offset() + 5 < resp_len {
+                                    *self.resp_index.offset_mut() = self.resp_index.offset() + 5;
+                                }
+                            }
                         }
                         _ => {}
                     }
@@ -224,5 +353,12 @@ impl App {
             }
         }
         Ok(false)
+    }
+
+    pub fn handler<B: Write>(&mut self, _ui: &mut Ui<B>) -> color_eyre::Result<()> {
+        for task in self.task_list.iter_mut() {
+            task.recv_respone();
+        }
+        Ok(())
     }
 }
