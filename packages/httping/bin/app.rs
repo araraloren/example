@@ -107,7 +107,7 @@ impl App {
         extract!(title_layout, main_layout, status_layout <- layout[0..3]);
 
         let layout =
-            Layout::horizontal([cons_percentage(50), cons_percentage(50)]).split(status_layout);
+            Layout::horizontal([cons_percentage(30), cons_percentage(70)]).split(status_layout);
 
         extract!(status_layout, help_layout <- layout[0..2]);
 
