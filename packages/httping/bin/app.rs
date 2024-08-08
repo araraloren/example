@@ -246,15 +246,19 @@ impl App {
                         frame.render_stateful_widget(table, resp_layout, &mut self.table_index);
                     }
                     DisplayStyle::Total => {
+                        let total = respone_list
+                            .iter()
+                            .map(|v| v.total_cost().replace(".", "").parse::<u64>().unwrap())
+                            .sum::<u64>();
                         let data: Vec<_> = respone_list[self.total_index..]
                             .iter()
                             .map(|resp| {
-                                let total =
+                                let cost =
                                     resp.total_cost().replace(".", "").parse::<u64>().unwrap();
 
                                 match resp.status() {
                                     200 => Bar::default()
-                                        .value(total)
+                                        .value(cost)
                                         .text_value(String::default())
                                         .label(Line::from(format!(
                                             "{}s {}",
@@ -284,12 +288,21 @@ impl App {
                             .bar_width(1)
                             .label_style(Style::new().white())
                             .data(BarGroup::default().bars(&data))
-                            .max(1200);
+                            .max(total / respone_list.len() as u64);
 
                         frame.render_widget(bart_chart, resp_layout);
                     }
                     DisplayStyle::Chart(i) => {
-                        let data: Vec<_> = respone_list[self.total_index..]
+                        let total = respone_list
+                            .iter()
+                            .map(|v| {
+                                v.other_cost_list()[i]
+                                    .replace(".", "")
+                                    .parse::<u64>()
+                                    .unwrap()
+                            })
+                            .sum::<u64>();
+                        let data: Vec<_> = respone_list[self.other_index..]
                             .iter()
                             .map(|resp| {
                                 let total = resp.other_cost_list()[i]
@@ -329,7 +342,7 @@ impl App {
                             .bar_width(1)
                             .label_style(Style::new().white())
                             .data(BarGroup::default().bars(&data))
-                            .max(1200);
+                            .max(total / respone_list.len() as u64);
 
                         frame.render_widget(bart_chart, resp_layout);
                     }
@@ -499,16 +512,12 @@ impl App {
                                     }
                                 }
                             }
-                            DisplayStyle::Chart(i) => {
+                            DisplayStyle::Chart(_) => {
                                 if let Some(selected) = self.task_index.selected() {
-                                    let resp = self.task_list[selected].respone();
+                                    let resp_len = self.task_list[selected].respone().len();
 
-                                    if !resp.is_empty() {
-                                        let resp_len = resp[i].other_cost_list().len();
-
-                                        if self.other_index + 5 < resp_len {
-                                            self.other_index += 5;
-                                        }
+                                    if self.other_index + 5 < resp_len {
+                                        self.other_index += 5;
                                     }
                                 }
                             }
