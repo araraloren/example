@@ -1,22 +1,22 @@
 
-# Ping test
+# A example of how using wit
 
 ## Running
 
-`cargo r -- www.baidu.com` or `cargo r --bin httping www.baidu.com`
+install cargo-component
+
+`cargo install cargo-component`
+
+build snippet-cpp
+
+`cargo component build --manifest-path .\packages\snippet-cpp\Cargo.toml --release` 
+
+run snippet-cpp
+
+`cargo r --bin snippet`
 
 ## Help
 
-```
-Usage: httping [-k, --key] [-d, --debug] [-v, --verbose] [ARGS]
+* snippet-cpp/wit/deps is copied from directory wasmtime@23.0.0/crates/wasi/wit
 
-Options:
-  -k, --key          Set the key of request ["token_20230313000136kwyktxb0tgspm00yo5"]
-  -d, --debug        Enable debug mode
-  -v, --verbose      Enable verbose mode
-
-Args:
-  host@1      The target url, for example: www.baidu.com
-
-Create by araraloren v0.1.0
-```
+* need add meta for cargo-component to \[package.metadata.component.target.dependencies\]
