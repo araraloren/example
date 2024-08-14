@@ -1,0 +1,8 @@
+package component:snippet-cpp;
+
+/// An example world for the component to target.
+world example {
+    import wasi:cli/environment@0.2.0;
+
+    export hello-world: func() -> string;
+}
