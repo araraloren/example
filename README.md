@@ -1,7 +1,7 @@
 
 # A example of how using wit
 
-## Running
+## Running snippet-cpp
 
 install cargo-component
 
@@ -14,6 +14,28 @@ build snippet-cpp
 run snippet-cpp
 
 `cargo r --bin snippet`
+
+## Running snippet-c
+
+install cargo-component
+
+`cargo install cargo-component`
+
+install wasm-tools
+
+`cargo install wasm-tools`
+
+build snippet-c
+
+`cargo build --target wasm32-wasip1 --manifest-path .\packages\snippet-c\Cargo.toml --release`
+
+convert module to component
+
+`wasm-tools component new .\target\wasm32-wasip1\release\snippet_c.wasm -o .\target\wasm32-wasip1\release\snippet_c1.wasm --adapt .\packages\wasi_snapshot_preview1.wasm`
+
+run snippet-c
+
+`cargo r --bin snippet1`
 
 ## Help
 

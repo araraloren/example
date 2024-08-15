@@ -7,6 +7,12 @@ members = [
 ]
 
 [workspace.dependencies]
+
+wit-bindgen = { version = "0.30" }
+wit-deps = { version = "0.3" }
+wit-bindgen-rt = { version = "0.30.0", features = [
+    "bitflags",
+] }
 tokio = { version = "1.39", features = ["full"] }
 cote = { version = "0.5", features = ["log"] }
 color-eyre = { version = "0.6" }

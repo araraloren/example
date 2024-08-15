@@ -1,0 +1,14 @@
+
+package component:snippet-c;
+
+interface send {
+    send: func(val: string) -> result<_, u32>;
+}
+
+world example {
+    import wasi:cli/stdin@0.2.0;
+
+    import send;
+
+    export echo: func() -> result<_, string>;
+}
