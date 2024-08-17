@@ -1,0 +1,19 @@
+[package]
+name = "snippet-y"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+color-eyre.workspace = true
+async-trait.workspace = true
+tracing-subscriber.workspace = true
+tracing.workspace = true
+wit-bindgen.workspace = true
+wasmtime.workspace = true
+
+[build-dependencies]
+wit-deps.workspace = true
+color-eyre.workspace = true
+
+[lib]
+crate-type = ["cdylib"]

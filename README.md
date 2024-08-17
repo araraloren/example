@@ -3,10 +3,6 @@
 
 ## Running snippet-cpp
 
-install cargo-component
-
-`cargo install cargo-component`
-
 build snippet-cpp
 
 `cargo component build --manifest-path .\packages\snippet-cpp\Cargo.toml --release` 

@@ -1,0 +1,8 @@
+
+package component:snippet-x;
+
+world example {
+    include sni:cli/imports@0.1.0;
+
+    export test: func();
+}

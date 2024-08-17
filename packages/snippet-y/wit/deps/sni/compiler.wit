@@ -1,0 +1,31 @@
+package sni:cli@0.1.0;
+
+interface compiler {
+    enum mode {
+        /// Compile the code to object.
+        compile,
+
+        /// Expand the macro or do preprocessing.
+        expand,
+
+        /// Compile the code to assembly.
+        assemble,
+
+        /// Compile the code and link the object to executable.
+        link,
+    }
+
+    resource compiler {
+        /// The name of the compiler.
+        name: func() -> string;
+
+        /// The language are supported by this compiler.
+        langs: func() -> list<string>;
+        
+        /// Set the language.
+        set-lang: func(language: string) -> bool;
+
+        /// Set the compile mode.
+        set-mode: func(mode: mode) -> bool;
+    }
+}

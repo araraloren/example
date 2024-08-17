@@ -1,0 +1,8 @@
+
+package component:snippet-x;
+
+world compiler {
+    export sni:cli/compiler@0.1.0;
+
+    export run: func();
+}

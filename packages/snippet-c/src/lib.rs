@@ -1,6 +1,6 @@
 use bindings::{component::snippet_c::send, wasi::cli::stdin::get_stdin, Guest};
 
-mod bindings {
+pub mod bindings {
     wit_bindgen::generate!({
         world: "example",
         path: "wit",

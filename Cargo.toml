@@ -3,6 +3,8 @@ resolver = "2"
 members = [
     "packages/snippet",
     "packages/snippet-c",
+    "packages/snippet-x",
+    "packages/snippet-y",
     "packages/snippet-cpp",
 ]
 
