@@ -1,8 +1,8 @@
-
-package component:snippet-x;
+package snippet:example@0.1.0;
 
 world example {
-    include sni:cli/imports@0.1.0;
-
-    export test: func();
+    import snippet:plugin/types@0.1.0;
+    
+    export snippet:plugin/plugin@0.1.0;
+    export snippet:c/language@0.1.0;
 }

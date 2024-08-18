@@ -9,6 +9,7 @@ pub mod bindings {
 }
 
 pub use bindings::*;
+
 use exports::sni::cli::compiler::GuestCompiler;
 use exports::sni::cli::compiler::Mode;
 
@@ -36,11 +37,17 @@ impl GuestCompiler for Compiler {
     }
 }
 
+impl bindings::exports::sni::cli::compiler::Guest for Compiler {
+    type Compiler = Compiler;
+}
+
 impl Guest for Compiler {
     fn run() {
         todo!()
     }
 }
+
+bindings::export!(Compiler with_types_in bindings);
 
 // use bindings::sni::cli::compiler::Mode;
 

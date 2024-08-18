@@ -1,51 +1,41 @@
-pub mod bindings {
-    wasmtime::component::bindgen!({
-        world: "example",
-        path: "wit",
-        tracing: true,
-        with: {
-            "sni:cli/language/language": crate::Language,
-            "sni:cli/compiler/compiler": crate::Compiler,
-        }
-    });
-}
+wit_bindgen::generate!({
+    world: "example",
+    path: "wit",
+    with: {
+        "snippet:c/language@0.1.0": generate,
+        "snippet:c/compiler@0.1.0": generate,
+        "snippet:plugin/plugin@0.1.0": generate,
+        "snippet:plugin/types@0.1.0": generate,
+    }
+});
 
-pub use bindings::*;
-
-use bindings::sni::cli::compiler::Mode;
+use exports::snippet::c::language::Guest as GuestLanguage;
+use exports::snippet::plugin::plugin::Guest as GuestPlugin;
+use exports::snippet::plugin::plugin::PluginKind;
+use snippet::c::compiler::Compiler;
+use snippet::plugin::types::ErrorType;
+use snippet::plugin::types::Optset;
 
 pub struct Language;
 
-impl Language {
-    pub fn name(&self) -> String {
-        "Rust".to_string()
+impl GuestLanguage for Language {
+    fn initialize_optset(optset: Optset) -> Result<(), ErrorType> {
+        Ok(())
     }
 
-    pub fn select_compiler(&self, complier: Vec<&Compiler>) -> Option<usize> {
-        todo!()
-    }
-
-    pub fn run(&self, args: Vec<String>, complier: Compiler) -> Result<(), String> {
-        todo!()
+    fn run(optset: Optset, compiler: Compiler) -> Result<(), ErrorType> {
+        Ok(())
     }
 }
 
-pub struct Compiler;
-
-impl Compiler {
-    pub fn name(&self) -> String {
-        todo!()
+impl GuestPlugin for Language {
+    fn name() -> String {
+        "c".to_string()
     }
 
-    pub fn langs(&self) -> Vec<String> {
-        todo!()
-    }
-
-    pub fn set_lang(&mut self, lang: String) -> bool {
-        todo!()
-    }
-
-    pub fn set_mode(&mut self, mode: Mode) -> bool {
-        todo!()
+    fn kind() -> PluginKind {
+        PluginKind::Language
     }
 }
+
+export!(Language);
