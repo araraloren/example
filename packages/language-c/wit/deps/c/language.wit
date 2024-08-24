@@ -1,0 +1,11 @@
+
+package snippet:c@0.1.0;
+
+interface language {
+    use snippet:plugin/types@0.1.0.{error-type, mode, optset};
+    use compiler.{compiler};
+    
+    initialize-optset: func(optset: optset) -> result<_, error-type>;
+
+    compile: func(optset: optset, compiler: compiler) -> result<_, error-type>;
+}

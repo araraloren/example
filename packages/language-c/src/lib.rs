@@ -1,5 +1,5 @@
 wit_bindgen::generate!({
-    world: "example",
+    world: "clang",
     path: "wit",
     with: {
         "snippet:c/language@0.1.0": generate,
@@ -9,10 +9,10 @@ wit_bindgen::generate!({
     }
 });
 
+use exports::snippet::c::language::Compiler;
 use exports::snippet::c::language::Guest as GuestLanguage;
 use exports::snippet::plugin::plugin::Guest as GuestPlugin;
 use exports::snippet::plugin::plugin::PluginKind;
-use snippet::c::compiler::Compiler;
 use snippet::plugin::types::ErrorType;
 use snippet::plugin::types::Optset;
 
@@ -20,11 +20,11 @@ pub struct Language;
 
 impl GuestLanguage for Language {
     fn initialize_optset(optset: Optset) -> Result<(), ErrorType> {
-        Ok(())
+        todo!()
     }
 
-    fn run(optset: Optset, compiler: Compiler) -> Result<(), ErrorType> {
-        Ok(())
+    fn compile(optset: Optset, compiler: Compiler) -> Result<(), ErrorType> {
+        todo!()
     }
 }
 
@@ -38,4 +38,4 @@ impl GuestPlugin for Language {
     }
 }
 
-export!(Language);
+export!(Language with_types_in crate);

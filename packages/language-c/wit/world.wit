@@ -1,7 +1,8 @@
 package snippet:example@0.1.0;
 
-world example {
+world clang {
     import snippet:plugin/types@0.1.0;
+    import snippet:c/compiler@0.1.0;
     
     export snippet:plugin/plugin@0.1.0;
     export snippet:c/language@0.1.0;

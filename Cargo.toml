@@ -3,8 +3,8 @@ resolver = "2"
 members = [
     "packages/snippet",
     "packages/snippet-c",
-    "packages/snippet-x",
-    "packages/snippet-y",
+    "packages/language-c",
+    "packages/compiler-c",
     "packages/snippet-cpp",
 ]
 
@@ -26,9 +26,10 @@ tracing-subscriber = { version = "0.3", features = [
 serde_json = "1.0"
 tracing = "0.1"
 async-trait = "0.1"
-wasmtime = { version = "23.0" }
+wasmtime = { version = "24.0" }
 wasm-bindgen = { version = "0.2" }
-wasmtime-wasi = { version = "23.0" }
+wasmtime-wasi = { version = "24.0" }
+wac-graph = "0.5"
 
 [profile.release]
 lto = true

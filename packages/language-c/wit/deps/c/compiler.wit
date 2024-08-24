@@ -1,0 +1,39 @@
+
+package snippet:c@0.1.0;
+
+interface compiler {
+    use snippet:plugin/types@0.1.0.{error-type, mode};
+
+    enum standard {
+        c89,
+        c99,
+        c11,
+        c17,
+        c23,
+    }
+
+    resource compiler {
+        constructor();
+
+        /// Current arguments.
+        args: func() -> list<string>;
+
+        /// Is the compiler in debug mode?
+        debug: func() -> bool;
+
+        /// Current compile mode.
+        mode: func() -> mode;
+
+        /// Set debug mode.
+        set-debug: func(debug: bool) -> result<_, error-type>;
+
+        /// Set the compile mode.
+        set-mode: func(mode: mode) -> result<_, error-type>;
+
+        /// Set the optimize level.
+        set-opt-level: func(level: u8) -> result<_, error-type>;
+
+        /// Set the c standard.
+        set-standard: func(std: standard) -> result<_, error-type>;
+    }
+}

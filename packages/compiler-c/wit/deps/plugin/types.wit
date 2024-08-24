@@ -1,0 +1,64 @@
+package snippet:plugin@0.1.0;
+
+interface types {
+    enum lang {
+        c, 
+        cxx,
+        rust,
+    }
+
+    enum mode {
+        /// Compile the code to object
+        compile,
+
+        /// Expand the macro or do preprocessing
+        expand,
+
+        /// Compile the code to assembly
+        assemble,
+
+        /// Compile the code and link the object to executable
+        link,
+    }
+
+    enum error-type {
+        /// Not support given mode
+        invalid-mode,
+
+        /// Not support given language
+        invalid-lang,
+
+        /// Invalid option string
+        invalid-optstr,
+
+        /// Can not get optset resource from resource table
+        invalid-optset-resource,
+
+        /// Can not get services resource from resource table
+        invalid-services-resource,
+
+        /// Failed invoke command
+        invalid-command,
+    }
+
+    resource optset {
+        /// Add an option to the option set
+        add-opt: func(opt: string) -> result<u64, error-type>;
+    }
+
+    resource services {
+        constructor();
+
+        /// Is the compiler in debug mode?
+        debug: func() -> result<bool, error-type>;
+    
+        /// Current language.
+        lang: func() -> result<lang, error-type>;
+    
+        /// Current arguments.
+        args: func() -> result<list<string>, error-type>;
+    
+        /// Current compile mode.
+        mode: func() -> result<mode, error-type>;
+    }
+}

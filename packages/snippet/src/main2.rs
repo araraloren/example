@@ -1,28 +1,38 @@
-use bindings::Example;
+// use bindings::Clang;
+use bindings::snippet::plugin::types::Lang;
+use bindings::Root;
 use std::path::PathBuf;
 use wasmtime::component::*;
 use wasmtime::Config;
 use wasmtime::Store;
+use wasmtime_wasi::WasiImpl;
 use wasmtime_wasi::{ResourceTable, WasiCtx, WasiCtxBuilder, WasiView};
 
 mod bindings {
     wasmtime::component::bindgen!( {
-        world: "example",
-        path: "../snippet-x/wit",
-        async: true,
+        world: "root",
+        path: "../compiler-c/wit",
         with: {
             "snippet:plugin/types/optset": crate::Optset,
             "snippet:plugin/types/services": crate::Services,
-            "snippet:c/compiler/compiler": crate::Compiler,
-        }
+        },
+        inline: "
+            package root:component;
+
+    world root {
+      import snippet:plugin/types@0.1.0;
+
+      export snippet:c/compiler@0.1.0;
+      export snippet:plugin/plugin@0.1.0;
+    }
+            "
     });
 }
 
-use bindings::snippet::c::compiler::HostCompiler;
-use bindings::snippet::plugin::types::CompileMode;
 use bindings::snippet::plugin::types::ErrorType;
 use bindings::snippet::plugin::types::HostOptset;
 use bindings::snippet::plugin::types::HostServices;
+use bindings::snippet::plugin::types::Mode;
 
 pub struct Optset {}
 
@@ -45,9 +55,25 @@ impl WasiView for MyState {
     }
 }
 
-#[async_trait::async_trait]
-impl HostOptset for MyState {
-    async fn add_opt(
+// #[async_trait::async_trait]
+// impl HostOptset for MyState {
+//     async fn add_opt(
+//         &mut self,
+//         self_: wasmtime::component::Resource<Optset>,
+//         opt: wasmtime::component::__internal::String,
+//     ) -> Result<u64, ErrorType> {
+//         let optset = self.table().get(&self_).unwrap();
+
+//         todo!()
+//     }
+
+//     fn drop(&mut self, rep: wasmtime::component::Resource<Optset>) -> wasmtime::Result<()> {
+//         Ok(())
+//     }
+// }
+
+impl<T: WasiView> HostOptset for WasiImpl<T> {
+    fn add_opt(
         &mut self,
         self_: wasmtime::component::Resource<Optset>,
         opt: wasmtime::component::__internal::String,
@@ -62,245 +88,77 @@ impl HostOptset for MyState {
     }
 }
 
-#[async_trait::async_trait]
-impl HostServices for MyState {
+impl<T: WasiView> HostServices for WasiImpl<T> {
+    fn new(&mut self) -> wasmtime::component::Resource<Services> {
+        todo!()
+    }
+
     #[doc = " Is the compiler in debug mode?"]
-    async fn debug(&mut self, self_: wasmtime::component::Resource<Services>) -> bool {
+    fn debug(&mut self, self_: wasmtime::component::Resource<Services>) -> Result<bool, ErrorType> {
         todo!()
     }
 
     #[doc = " Current language."]
-    async fn lang(
-        &mut self,
-        self_: wasmtime::component::Resource<Services>,
-    ) -> wasmtime::component::__internal::String {
+    fn lang(&mut self, self_: wasmtime::component::Resource<Services>) -> Result<Lang, ErrorType> {
         todo!()
     }
 
     #[doc = " Current arguments."]
-    async fn args(
+    fn args(
         &mut self,
         self_: wasmtime::component::Resource<Services>,
-    ) -> wasmtime::component::__internal::Vec<wasmtime::component::__internal::String> {
+    ) -> Result<
+        wasmtime::component::__internal::Vec<wasmtime::component::__internal::String>,
+        ErrorType,
+    > {
         todo!()
     }
 
     #[doc = " Current compile mode."]
-    async fn mode(&mut self, self_: wasmtime::component::Resource<Services>) -> CompileMode {
-        todo!()
-    }
-
-    #[doc = " Set the language."]
-    async fn set_lang(
-        &mut self,
-        self_: wasmtime::component::Resource<Services>,
-        language: wasmtime::component::__internal::String,
-    ) -> Result<(), ErrorType> {
-        todo!()
-    }
-
-    #[doc = " Set debug mode."]
-    async fn set_debug(
-        &mut self,
-        self_: wasmtime::component::Resource<Services>,
-        debug: bool,
-    ) -> Result<(), ErrorType> {
-        todo!()
-    }
-
-    #[doc = " Set the compile mode."]
-    async fn set_compile_mode(
-        &mut self,
-        self_: wasmtime::component::Resource<Services>,
-        mode: CompileMode,
-    ) -> Result<(), ErrorType> {
-        todo!()
-    }
-
-    #[doc = " Add an argument."]
-    async fn add_arg(
-        &mut self,
-        self_: wasmtime::component::Resource<Services>,
-        arg: wasmtime::component::__internal::String,
-    ) -> Result<(), ErrorType> {
-        todo!()
-    }
-
-    #[doc = " Append arguments."]
-    async fn add_args(
-        &mut self,
-        self_: wasmtime::component::Resource<Services>,
-        args: wasmtime::component::__internal::Vec<wasmtime::component::__internal::String>,
-    ) -> Result<(), ErrorType> {
+    fn mode(&mut self, self_: wasmtime::component::Resource<Services>) -> Result<Mode, ErrorType> {
         todo!()
     }
 
     fn drop(&mut self, rep: wasmtime::component::Resource<Services>) -> wasmtime::Result<()> {
-        Ok(())
+        todo!()
     }
 }
 
-impl bindings::snippet::plugin::types::Host for MyState {}
+impl<T: WasiView> bindings::snippet::plugin::types::Host for WasiImpl<T> {}
 
-#[async_trait::async_trait]
-impl HostCompiler for MyState {
-    #[doc = " Is the compiler in debug mode?"]
-    async fn debug(&mut self, self_: wasmtime::component::Resource<Compiler>) -> bool {
-        todo!()
-    }
-
-    #[doc = " Current language."]
-    async fn lang(
-        &mut self,
-        self_: wasmtime::component::Resource<Compiler>,
-    ) -> wasmtime::component::__internal::String {
-        todo!()
-    }
-
-    #[doc = " Current arguments."]
-    async fn args(
-        &mut self,
-        self_: wasmtime::component::Resource<Compiler>,
-    ) -> wasmtime::component::__internal::Vec<wasmtime::component::__internal::String> {
-        todo!()
-    }
-
-    #[doc = " Current compile mode."]
-    async fn mode(&mut self, self_: wasmtime::component::Resource<Compiler>) -> CompileMode {
-        todo!()
-    }
-
-    #[doc = " Set the language."]
-    async fn set_lang(
-        &mut self,
-        self_: wasmtime::component::Resource<Compiler>,
-        language: wasmtime::component::__internal::String,
-    ) -> Result<(), ErrorType> {
-        todo!()
-    }
-
-    #[doc = " Set debug mode."]
-    async fn set_debug(
-        &mut self,
-        self_: wasmtime::component::Resource<Compiler>,
-        debug: bool,
-    ) -> Result<(), ErrorType> {
-        todo!()
-    }
-
-    #[doc = " Set the compile mode."]
-    async fn set_compile_mode(
-        &mut self,
-        self_: wasmtime::component::Resource<Compiler>,
-        mode: CompileMode,
-    ) -> Result<(), ErrorType> {
-        todo!()
-    }
-
-    #[doc = " Set the optimize level."]
-    async fn set_optimize_level(
-        &mut self,
-        self_: wasmtime::component::Resource<Compiler>,
-        level: u8,
-    ) -> Result<(), ErrorType> {
-        todo!()
-    }
-
-    #[doc = " Set the c standard."]
-    async fn set_standard(
-        &mut self,
-        self_: wasmtime::component::Resource<Compiler>,
-        std: wasmtime::component::__internal::String,
-    ) -> Result<(), ErrorType> {
-        todo!()
-    }
-
-    #[doc = " Add a macro."]
-    async fn set_macro(
-        &mut self,
-        self_: wasmtime::component::Resource<Compiler>,
-        macro_: wasmtime::component::__internal::String,
-        value: Option<wasmtime::component::__internal::String>,
-    ) -> Result<(), ErrorType> {
-        todo!()
-    }
-
-    #[doc = " Add include path."]
-    async fn set_include_path(
-        &mut self,
-        self_: wasmtime::component::Resource<Compiler>,
-        path: wasmtime::component::__internal::String,
-    ) -> Result<(), ErrorType> {
-        todo!()
-    }
-
-    #[doc = " Add library path."]
-    async fn set_library_path(
-        &mut self,
-        self_: wasmtime::component::Resource<Compiler>,
-        path: wasmtime::component::__internal::String,
-    ) -> Result<(), ErrorType> {
-        todo!()
-    }
-
-    #[doc = " Link a library."]
-    async fn link_library_path(
-        &mut self,
-        self_: wasmtime::component::Resource<Compiler>,
-        library: wasmtime::component::__internal::String,
-    ) -> Result<(), ErrorType> {
-        todo!()
-    }
-
-    #[doc = " Add an argument."]
-    async fn add_arg(
-        &mut self,
-        self_: wasmtime::component::Resource<Compiler>,
-        arg: wasmtime::component::__internal::String,
-    ) -> Result<(), ErrorType> {
-        todo!()
-    }
-
-    #[doc = " Append arguments."]
-    async fn add_args(
-        &mut self,
-        self_: wasmtime::component::Resource<Compiler>,
-        args: wasmtime::component::__internal::Vec<wasmtime::component::__internal::String>,
-    ) -> Result<(), ErrorType> {
-        todo!()
-    }
-
-    fn drop(&mut self, rep: wasmtime::component::Resource<Compiler>) -> wasmtime::Result<()> {
-        Ok(())
-    }
-}
-
-impl bindings::snippet::c::compiler::Host for MyState {}
-
-use cote::prelude::ConfigValue;
 use cote::prelude::Cote;
-use cote::prelude::Ctor;
-use cote::prelude::SetExt;
+use wac_graph::{types::Package, CompositionGraph, EncodeOptions};
 
 #[derive(Debug, Cote)]
 pub struct Cli {
     #[pos()]
-    path: PathBuf,
+    compiler: PathBuf,
+
+    #[pos()]
+    lang: PathBuf,
 }
 
-pub async fn internal() -> wasmtime::Result<()> {
-    let Cli { path } = Cli::parse_env()?;
+// NB: workaround some rustc inference - a future refactoring may make this
+// obsolete.
+fn type_annotate<T: WasiView, F>(val: F) -> F
+where
+    F: Fn(&mut T) -> WasiImpl<&mut T>,
+{
+    val
+}
 
+pub fn internal() -> wasmtime::Result<()> {
     let mut config = Config::new();
     // Instantiate the engine and store
-    let engine = wasmtime::Engine::new(config.async_support(true))?;
+    let engine = wasmtime::Engine::new(config.async_support(false))?;
 
     // Create a linker
     let mut linker = Linker::<MyState>::new(&engine);
+    let closure = type_annotate::<MyState, _>(|t| WasiImpl(t));
 
-    wasmtime_wasi::add_to_linker_async(&mut linker)?;
-    bindings::snippet::plugin::types::add_to_linker(&mut linker, |a| a)?;
-    bindings::snippet::c::compiler::add_to_linker(&mut linker, |a| a)?;
+    wasmtime_wasi::add_to_linker_sync(&mut linker)?;
+    bindings::snippet::plugin::types::add_to_linker_get_host(&mut linker, closure)?;
+    //bindings::snippet::c::compiler::add_to_linker(&mut linker, |a| a)?;
 
     // Create a store
     let mut store = Store::new(
@@ -315,89 +173,62 @@ pub async fn internal() -> wasmtime::Result<()> {
     );
 
     // Load component
-    let component = Component::from_file(&engine, &path)?;
+    let lang = Component::from_file(&engine, "out.wasm")?;
+    //let compiler = Component::from_file(&engine, &compiler)?;
 
     // Instantiate the component
-    let bindings = Example::instantiate_async(&mut store, &component, &linker).await?;
+    let bindings = Root::instantiate(&mut store, &lang, &linker)?;
 
     // Call the `greet` function
-    let result = bindings
-        .snippet_plugin_plugin()
-        .call_name(&mut store)
-        .await?;
+    let result = bindings.snippet_plugin_plugin().call_name(&mut store)?;
 
     // This should print out `Greeting: [String("Hello, Alice!")]`
     println!("Greeting: {:?}", result);
 
-    let optset = store.data_mut().table().push(Optset {})?;
-    let compiler = store.data_mut().table().push(Compiler {})?;
+    // let optset = store.data_mut().table().push(Optset {})?;
+    // let compiler = store.data_mut().table().push(Compiler {})?;
 
-    let result = bindings
-        .snippet_c_language()
-        .call_run(&mut store, optset, compiler)
-        .await?;
+    // let result = bindings
+    //     .snippet_c_language()
+    //     .call_run(&mut store, optset, compiler)
+    //     .await?;
 
-    println!("--> {:?}", result);
-
-    Ok(())
-}
-
-pub async fn internal2() -> wasmtime::Result<()> {
-    let Cli { path } = Cli::parse_env()?;
-
-    let mut config = Config::new();
-    // Instantiate the engine and store
-    let engine = wasmtime::Engine::new(config.async_support(true))?;
-
-    // Create a linker
-    let mut linker = Linker::<MyState>::new(&engine);
-
-    wasmtime_wasi::add_to_linker_async(&mut linker)?;
-    bindings::snippet::plugin::types::add_to_linker(&mut linker, |a| a)?;
-    bindings::snippet::c::compiler::add_to_linker(&mut linker, |a| a)?;
-
-    // Create a store
-    let mut store = Store::new(
-        &engine,
-        MyState {
-            ctx: WasiCtxBuilder::new()
-                .inherit_stdin()
-                .inherit_stdout()
-                .build(),
-            table: ResourceTable::new(),
-        },
-    );
-
-    // Load component
-    let component = Component::from_file(&engine, &path)?;
-
-    // Instantiate the component
-    let bindings = Example::instantiate_async(&mut store, &component, &linker).await?;
-
-    // Call the `greet` function
-    let result = bindings
-        .snippet_plugin_plugin()
-        .call_name(&mut store)
-        .await?;
-
-    // This should print out `Greeting: [String("Hello, Alice!")]`
-    println!("Greeting: {:?}", result);
-
-    let optset = store.data_mut().table().push(Optset {})?;
-    let compiler = store.data_mut().table().push(Compiler {})?;
-
-    let result = bindings
-        .snippet_c_language()
-        .call_run(&mut store, optset, compiler)
-        .await?;
-
-    println!("--> {:?}", result);
+    // println!("--> {:?}", result);
 
     Ok(())
 }
 
-#[tokio::main]
-async fn main() -> wasmtime::Result<()> {
-    internal().await?;
+pub fn link_component(a: PathBuf, b: PathBuf) -> wasmtime::Result<()> {
+    let mut graph = CompositionGraph::new();
+    let compiler = Package::from_file("compiler_c", None, a, graph.types_mut())?;
+    let compiler = graph.register_package(compiler)?;
+    let language = Package::from_file("language_c", None, b, graph.types_mut())?;
+    let language = graph.register_package(language)?;
+    let compiler_ins = graph.instantiate(compiler);
+    let language_ins = graph.instantiate(language);
+
+    let comp_comp = graph.alias_instance_export(compiler_ins, "snippet:c/compiler@0.1.0")?;
+
+    graph.set_instantiation_argument(language_ins, "snippet:c/compiler@0.1.0", comp_comp)?;
+
+    let lang_plugin = graph.alias_instance_export(language_ins, "snippet:plugin/plugin@0.1.0")?;
+    let lang_lang = graph.alias_instance_export(language_ins, "snippet:c/language@0.1.0")?;
+
+    graph.export(lang_plugin, "snippet:plugin/plugin@0.1.0")?;
+    graph.export(lang_lang, "snippet:c/language@0.1.0")?;
+    graph.export(comp_comp, "snippet:c/compiler@0.1.0")?;
+
+    let encoding = graph.encode(EncodeOptions::default())?;
+
+    std::fs::write("out.wasm", encoding)?;
+
+    Ok(())
+}
+
+fn main() -> wasmtime::Result<()> {
+    let Cli { lang, compiler } = Cli::parse_env().unwrap();
+
+    link_component(compiler, lang)?;
+    internal()?;
     Ok(())
 }
