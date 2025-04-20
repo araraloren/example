@@ -3,15 +3,13 @@ wit_bindgen::generate!({
     path: "wit",
     with: {
         "snippet:plugin/types@0.1.0": generate,
-        "snippet:plugin/plugin@0.1.0": generate,
-        "snippet:c/compiler@0.1.0": generate,
+        "snippet:plugin/compiler@0.1.0": generate,
     }
 });
 
-use exports::snippet::c::compiler::GuestCompiler;
-use exports::snippet::c::compiler::Standard;
-use exports::snippet::plugin::plugin::PluginKind;
+use exports::snippet::plugin::compiler::GuestCompiler;
 use snippet::plugin::types::ErrorType;
+use snippet::plugin::types::Lang;
 use snippet::plugin::types::Mode;
 
 pub struct Compiler;
@@ -22,7 +20,7 @@ impl GuestCompiler for Compiler {
     }
 
     #[doc = " Current arguments."]
-    fn args(&self) -> _rt::Vec<_rt::String> {
+    fn args(&self) -> Vec<String> {
         todo!()
     }
 
@@ -52,22 +50,65 @@ impl GuestCompiler for Compiler {
     }
 
     #[doc = " Set the c standard."]
-    fn set_standard(&self, std: Standard) -> Result<(), ErrorType> {
+    fn set_standard(&self, std: String) -> Result<(), ErrorType> {
+        todo!()
+    }
+
+    #[doc = " Add a macro."]
+    fn add_macro(&self, macro_: String, value: Option<String>) -> Result<(), ErrorType> {
+        todo!()
+    }
+
+    #[doc = " Add include path."]
+    fn add_include_path(&self, path: String) -> Result<(), ErrorType> {
+        todo!()
+    }
+
+    #[doc = " Add library path."]
+    fn add_library_path(&self, path: String) -> Result<(), ErrorType> {
+        todo!()
+    }
+
+    #[doc = " Link a library."]
+    fn link_library_path(&self, library: String) -> Result<(), ErrorType> {
+        todo!()
+    }
+
+    #[doc = " Add an argument."]
+    fn add_arg(&self, arg: String) -> Result<(), ErrorType> {
+        todo!()
+    }
+
+    #[doc = " Append arguments."]
+    fn add_args(&self, args: Vec<String>) -> Result<(), ErrorType> {
+        todo!()
+    }
+
+    #[doc = " Compile the code"]
+    fn compile(&self, source: Vec<String>, out: String) -> Result<String, ErrorType> {
+        todo!()
+    }
+
+    #[doc = " Compile the file"]
+    fn compile_file(&self, path: String, out: String) -> Result<String, ErrorType> {
+        todo!()
+    }
+
+    #[doc = " Link the object into executable"]
+    fn link_object(&self, objs: Vec<String>, out: String) -> Result<String, ErrorType> {
         todo!()
     }
 }
 
-impl exports::snippet::c::compiler::Guest for Compiler {
+impl exports::snippet::plugin::compiler::Guest for Compiler {
     type Compiler = Compiler;
-}
 
-impl exports::snippet::plugin::plugin::Guest for Compiler {
-    fn name() -> String {
+    fn bin() -> std::string::String {
         "gcc".to_string()
     }
 
-    fn kind() -> PluginKind {
-        PluginKind::Compiler
+    fn support_langs() -> _rt::Vec<Lang> {
+        vec![Lang::C, Lang::Cxx]
     }
 }
 

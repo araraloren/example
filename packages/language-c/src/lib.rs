@@ -2,17 +2,14 @@ wit_bindgen::generate!({
     world: "clang",
     path: "wit",
     with: {
-        "snippet:c/language@0.1.0": generate,
-        "snippet:c/compiler@0.1.0": generate,
-        "snippet:plugin/plugin@0.1.0": generate,
+        "snippet:plugin/language@0.1.0": generate,
+        "snippet:plugin/compiler@0.1.0": generate,
         "snippet:plugin/types@0.1.0": generate,
     }
 });
 
-use exports::snippet::c::language::Compiler;
-use exports::snippet::c::language::Guest as GuestLanguage;
-use exports::snippet::plugin::plugin::Guest as GuestPlugin;
-use exports::snippet::plugin::plugin::PluginKind;
+use exports::snippet::plugin::language::Compiler;
+use exports::snippet::plugin::language::Guest as GuestLanguage;
 use snippet::plugin::types::ErrorType;
 use snippet::plugin::types::Optset;
 
@@ -26,15 +23,9 @@ impl GuestLanguage for Language {
     fn compile(optset: Optset, compiler: Compiler) -> Result<(), ErrorType> {
         todo!()
     }
-}
 
-impl GuestPlugin for Language {
-    fn name() -> String {
+    fn name() -> _rt::String {
         "c".to_string()
-    }
-
-    fn kind() -> PluginKind {
-        PluginKind::Language
     }
 }
 

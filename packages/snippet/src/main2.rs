@@ -227,6 +227,14 @@ pub fn link_component(a: PathBuf, b: PathBuf) -> wasmtime::Result<()> {
 
 fn main() -> wasmtime::Result<()> {
     let Cli { lang, compiler } = Cli::parse_env().unwrap();
+    let engine = wasmtime::Engine::new(&Config::new())?;
+
+    for x in Component::from_file(&engine, &lang)?
+        .component_type()
+        .exports(&engine)
+    {
+        dbg!(x);
+    }
 
     link_component(compiler, lang)?;
     internal()?;

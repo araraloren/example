@@ -1,0 +1,62 @@
+
+package snippet:plugin@0.1.0;
+
+interface compiler {
+    use types.{error-type, mode, lang};
+
+    bin: func() -> string;
+
+    support-langs: func() -> list<lang>;
+
+    resource compiler {
+        constructor();
+
+        /// Current arguments.
+        args: func() -> list<string>;
+
+        /// Is the compiler in debug mode?
+        debug: func() -> bool;
+
+        /// Current compile mode.
+        mode: func() -> mode;
+
+        /// Set debug mode.
+        set-debug: func(debug: bool) -> result<_, error-type>;
+
+        /// Set the compile mode.
+        set-mode: func(mode: mode) -> result<_, error-type>;
+
+        /// Set the optimize level.
+        set-opt-level: func(level: u8) -> result<_, error-type>;
+
+        /// Set the c standard.
+        set-standard: func(std: string) -> result<_, error-type>;
+
+        /// Add a macro.
+        add-macro: func(macro: string, value: option<string>) -> result<_, error-type>;
+
+        /// Add include path.
+        add-include-path: func(path: string) -> result<_, error-type>;
+
+        /// Add library path.
+        add-library-path: func(path: string) -> result<_, error-type>;
+
+        /// Link a library.
+        link-library-path: func(library: string) -> result<_, error-type>;
+
+        /// Add an argument.
+        add-arg: func(arg: string) -> result<_, error-type>;
+
+        /// Append arguments.
+        add-args: func(args: list<string>) -> result<_, error-type>;
+
+        /// Compile the code
+        compile: func(source: list<string>, out: string) -> result<string, error-type>;
+
+        /// Compile the file
+        compile-file: func(path: string, out: string) -> result<string, error-type>;
+
+        /// Link the object into executable
+        link-object: func(objs: list<string>, out: string) -> result<string, error-type>;
+    }
+}

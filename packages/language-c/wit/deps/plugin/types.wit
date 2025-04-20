@@ -1,9 +1,12 @@
 package snippet:plugin@0.1.0;
 
 interface types {
+
     enum lang {
-        c, 
+        c,
+
         cxx,
+
         rust,
     }
 
@@ -60,5 +63,23 @@ interface types {
     
         /// Current compile mode.
         mode: func() -> result<mode, error-type>;
+        
+        /// Set the language.
+        set-lang: func(language: lang) -> result<_, error-type>;
+    
+        /// Set debug mode.
+        set-debug: func(debug: bool) -> result<_, error-type>;
+    
+        /// Set the compile mode.
+        set-mode: func(mode: mode) -> result<_, error-type>;
+    
+        /// Add an argument.
+        add-arg: func(arg: string) -> result<_, error-type>;
+    
+        /// Append arguments.
+        add-args: func(args: list<string>) -> result<_, error-type>;
+
+        /// Invoke the command
+        invoke-cmd: static func(bin: string, args: list<string>) -> result<_, error-type>;
     }
 }
