@@ -1,15 +1,26 @@
 use neure::prelude::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tracing_subscriber::fmt::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-        .init();
-    let array = regex::array(["a", "b", "c"]);
+    let num = '9'.at_least::<1>();
+    let ver = num.sep_once(".", num);
 
-    // No match possible
-    CharsCtx::with("xyz", move |mut ctx| {
-        assert!(!array.parse(&mut ctx));
-        assert_eq!(ctx.offset(), 0);
-    });
+    let mut ctx = CharsCtx::new("");
+
+    ctx.ctor(&ver)?;
+
+    let num = '9'.at_most::<1>();
+    let ver = num.sep_once(".", num);
+
+    let mut ctx = CharsCtx::new("");
+
+    ctx.ctor(&ver)?;
+
+    let num = '9'.between::<1, 2>();
+    let ver = num.sep_once(".", num);
+
+    let mut ctx = CharsCtx::new("");
+
+    ctx.ctor(&ver)?;
+
     Ok(())
 }
